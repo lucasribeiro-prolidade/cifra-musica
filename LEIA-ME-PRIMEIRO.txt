@@ -1,0 +1,34 @@
+CIFRA-MUSICA — PACOTE PRONTO PARA GITHUB PAGES
+
+NOME DO REPOSITORIO:
+cifra-musica
+
+ARQUIVOS QUE DEVEM FICAR NA RAIZ DO REPOSITORIO:
+- index.html
+- config.js
+- supabase_setup.sql
+- .nojekyll
+- README.md
+- LEIA-ME-PRIMEIRO.txt
+
+ANTES DE O LOGIN/NUVEM FUNCIONAR:
+1. Crie ou abra seu projeto no Supabase.
+2. No Supabase, abra SQL Editor > New query.
+3. Cole o conteúdo de supabase_setup.sql e clique em Run.
+4. Vá às configurações/API do projeto e copie:
+   - Project URL
+   - Publishable key (ou anon key, dependendo da tela)
+5. Edite config.js e substitua apenas os dois textos COLE_AQUI...
+6. Não use a Service Role Key.
+
+PARA PUBLICAR NO GITHUB PAGES:
+1. Crie o repositorio publico cifra-musica.
+2. Envie estes arquivos DESCOMPACTADOS para a raiz.
+3. Commit changes.
+4. Settings > Pages.
+5. Source: Deploy from a branch.
+6. Branch: main e pasta /(root).
+7. Save.
+
+O endereço ficará parecido com:
+https://SEU-USUARIO.github.io/cifra-musica/

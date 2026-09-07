@@ -212,6 +212,152 @@ app.get('/api/auth/me', async (req, res) => {
 });
 
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+}
+
+async function replaceCifraCantores(client, cifraId, userId, rawSingerTones) {
+  await client.query('DELETE FROM cifra_cantores WHERE cifra_id=$1', [cifraId]);
+  const items = Array.isArray(rawSingerTones) ? rawSingerTones.slice(0, 50) : [];
+  const normalized = [];
+  const seen = new Set();
+  for (const item of items) {
+    const singerId = cleanString(item?.singer_id || item?.cantor_id, 80);
+    if (!isUuid(singerId) || seen.has(singerId)) continue;
+    seen.add(singerId);
+    normalized.push({ singerId, tone: cleanString(item?.tone, 20) || null });
+  }
+  if (!normalized.length) return;
+
+  const ids = normalized.map(x => x.singerId);
+  const valid = await client.query(
+    'SELECT id FROM cantores WHERE user_id=$1 AND id = ANY($2::uuid[])',
+    [userId, ids]
+  );
+  const validIds = new Set(valid.rows.map(x => String(x.id)));
+  for (const item of normalized) {
+    if (!validIds.has(item.singerId)) continue;
+    await client.query(
+      `INSERT INTO cifra_cantores(cifra_id,cantor_id,tone) VALUES($1,$2,$3)
+       ON CONFLICT(cifra_id,cantor_id) DO UPDATE SET tone=EXCLUDED.tone`,
+      [cifraId, item.singerId, item.tone]
+    );
+  }
+}
+
+async function fetchCifraRows(db, userId, cifraId = null) {
+  const params = cifraId ? [userId, cifraId] : [userId];
+  const extra = cifraId ? ' AND c.id=$2' : '';
+  const result = await db.query(`
+    SELECT c.id,c.title,c.tone,c.text,c.created_at,c.updated_at,
+           COALESCE(
+             jsonb_agg(
+               jsonb_build_object('singer_id',ca.id,'name',ca.name,'tone',cc.tone)
+               ORDER BY ca.name
+             ) FILTER (WHERE ca.id IS NOT NULL),
+             '[]'::jsonb
+           ) AS singers
+    FROM cifras c
+    LEFT JOIN cifra_cantores cc ON cc.cifra_id=c.id
+    LEFT JOIN cantores ca ON ca.id=cc.cantor_id
+    WHERE c.user_id=$1${extra}
+    GROUP BY c.id
+    ORDER BY c.updated_at DESC
+  `, params);
+  return result.rows;
+}
+
+async function ensureSingerByName(client, userId, rawName) {
+  const name = cleanString(rawName, 120);
+  if (!name) return null;
+  const found = await client.query(
+    'SELECT id,name FROM cantores WHERE user_id=$1 AND LOWER(name)=LOWER($2) LIMIT 1',
+    [userId, name]
+  );
+  if (found.rowCount) return found.rows[0];
+  try {
+    const created = await client.query(
+      'INSERT INTO cantores(user_id,name) VALUES($1,$2) RETURNING id,name',
+      [userId, name]
+    );
+    return created.rows[0];
+  } catch (err) {
+    if (err.code !== '23505') throw err;
+    const retry = await client.query(
+      'SELECT id,name FROM cantores WHERE user_id=$1 AND LOWER(name)=LOWER($2) LIMIT 1',
+      [userId, name]
+    );
+    return retry.rows[0] || null;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// CANTORES DO USUARIO
+// ══════════════════════════════════════════════════════
+app.get('/api/cantores', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ca.id,ca.name,ca.created_at,ca.updated_at,COUNT(cc.cifra_id)::int AS cifra_count
+       FROM cantores ca
+       LEFT JOIN cifra_cantores cc ON cc.cantor_id=ca.id
+       WHERE ca.user_id=$1
+       GROUP BY ca.id
+       ORDER BY LOWER(ca.name)`,
+      [req.session.userId]
+    );
+    res.json({ items: result.rows });
+  } catch (err) {
+    console.error('list cantores', err);
+    res.status(500).json({ error: 'Erro ao carregar cantores.' });
+  }
+});
+
+app.post('/api/cantores', requireAuth, async (req, res) => {
+  try {
+    const name = cleanString(req.body?.name, 120);
+    if (!name) return res.status(400).json({ error: 'Informe o nome do cantor.' });
+    const result = await pool.query(
+      'INSERT INTO cantores(user_id,name) VALUES($1,$2) RETURNING id,name,created_at,updated_at',
+      [req.session.userId, name]
+    );
+    res.status(201).json({ item: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Este cantor ja esta cadastrado.' });
+    console.error('create cantor', err);
+    res.status(500).json({ error: 'Erro ao cadastrar cantor.' });
+  }
+});
+
+app.put('/api/cantores/:id', requireAuth, async (req, res) => {
+  try {
+    const name = cleanString(req.body?.name, 120);
+    if (!name) return res.status(400).json({ error: 'Informe o nome do cantor.' });
+    const result = await pool.query(
+      `UPDATE cantores SET name=$1 WHERE id=$2 AND user_id=$3
+       RETURNING id,name,created_at,updated_at`,
+      [name, req.params.id, req.session.userId]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'Cantor nao encontrado.' });
+    res.json({ item: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Ja existe outro cantor com este nome.' });
+    console.error('update cantor', err);
+    res.status(500).json({ error: 'Erro ao atualizar cantor.' });
+  }
+});
+
+app.delete('/api/cantores/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM cantores WHERE id=$1 AND user_id=$2', [req.params.id, req.session.userId]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Cantor nao encontrado.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('delete cantor', err);
+    res.status(500).json({ error: 'Erro ao excluir cantor.' });
+  }
+});
+
+
 
 // ══════════════════════════════════════════════════════
 // ADMINISTRACAO DE USUARIOS
@@ -278,12 +424,8 @@ app.patch('/api/admin/users/:id', requireAdmin, async (req, res) => {
 
 app.get('/api/cifras', requireAuth, async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id,title,tone,text,created_at,updated_at
-       FROM cifras WHERE user_id=$1 ORDER BY updated_at DESC`,
-      [req.session.userId]
-    );
-    res.json({ items: result.rows });
+    const items = await fetchCifraRows(pool, req.session.userId);
+    res.json({ items });
   } catch (err) {
     console.error('list cifras', err);
     res.status(500).json({ error: 'Erro ao carregar cifras.' });
@@ -291,41 +433,59 @@ app.get('/api/cifras', requireAuth, async (req, res) => {
 });
 
 app.post('/api/cifras', requireAuth, async (req, res) => {
+  const client = await pool.connect();
   try {
     const title = cleanString(req.body?.title || 'Sem titulo', 300) || 'Sem titulo';
     const tone = cleanString(req.body?.tone, 20) || null;
     const text = String(req.body?.text || '');
     if (!text.trim()) return res.status(400).json({ error: 'A cifra esta vazia.' });
     if (text.length > 250000) return res.status(413).json({ error: 'Cifra muito grande.' });
-    const result = await pool.query(
-      `INSERT INTO cifras(user_id,title,tone,text) VALUES($1,$2,$3,$4)
-       RETURNING id,title,tone,text,created_at,updated_at`,
+    await client.query('BEGIN');
+    const result = await client.query(
+      `INSERT INTO cifras(user_id,title,tone,text) VALUES($1,$2,$3,$4) RETURNING id`,
       [req.session.userId, title, tone, text]
     );
-    res.status(201).json({ item: result.rows[0] });
+    const cifraId = result.rows[0].id;
+    await replaceCifraCantores(client, cifraId, req.session.userId, req.body?.singer_tones);
+    await client.query('COMMIT');
+    const item = (await fetchCifraRows(pool, req.session.userId, cifraId))[0];
+    res.status(201).json({ item });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('create cifra', err);
     res.status(500).json({ error: 'Erro ao salvar cifra.' });
+  } finally {
+    client.release();
   }
 });
 
 app.put('/api/cifras/:id', requireAuth, async (req, res) => {
+  const client = await pool.connect();
   try {
     const title = cleanString(req.body?.title || 'Sem titulo', 300) || 'Sem titulo';
     const tone = cleanString(req.body?.tone, 20) || null;
     const text = String(req.body?.text || '');
     if (!text.trim()) return res.status(400).json({ error: 'A cifra esta vazia.' });
-    const result = await pool.query(
+    await client.query('BEGIN');
+    const result = await client.query(
       `UPDATE cifras SET title=$1,tone=$2,text=$3
-       WHERE id=$4 AND user_id=$5
-       RETURNING id,title,tone,text,created_at,updated_at`,
+       WHERE id=$4 AND user_id=$5 RETURNING id`,
       [title, tone, text, req.params.id, req.session.userId]
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Cifra nao encontrada.' });
-    res.json({ item: result.rows[0] });
+    if (!result.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Cifra nao encontrada.' });
+    }
+    await replaceCifraCantores(client, req.params.id, req.session.userId, req.body?.singer_tones);
+    await client.query('COMMIT');
+    const item = (await fetchCifraRows(pool, req.session.userId, req.params.id))[0];
+    res.json({ item });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('update cifra', err);
     res.status(500).json({ error: 'Erro ao atualizar cifra.' });
+  } finally {
+    client.release();
   }
 });
 
@@ -352,7 +512,17 @@ app.post('/api/cifras/import', requireAuth, async (req, res) => {
       if (!text.trim() || text.length > 250000) continue;
       const title = cleanString(item?.title || 'Sem titulo', 300) || 'Sem titulo';
       const tone = cleanString(item?.tone, 20) || null;
-      await client.query('INSERT INTO cifras(user_id,title,tone,text) VALUES($1,$2,$3,$4)', [req.session.userId, title, tone, text]);
+      const created = await client.query(
+        'INSERT INTO cifras(user_id,title,tone,text) VALUES($1,$2,$3,$4) RETURNING id',
+        [req.session.userId, title, tone, text]
+      );
+      const importedSingers = Array.isArray(item?.singers) ? item.singers.slice(0, 50) : [];
+      const singerTones = [];
+      for (const singer of importedSingers) {
+        const ensured = await ensureSingerByName(client, req.session.userId, singer?.name);
+        if (ensured) singerTones.push({ singer_id: ensured.id, tone: cleanString(singer?.tone, 20) || null });
+      }
+      await replaceCifraCantores(client, created.rows[0].id, req.session.userId, singerTones);
       added++;
     }
     await client.query('COMMIT');

@@ -595,7 +595,7 @@ async function applyUser(user){
   document.body.classList.remove("auth-pending");
   const isAdmin=currentUser.role==="admin";
   document.getElementById("user-chip").textContent=(currentUser.name||currentUser.email||"Usuário")+(isAdmin?" • Admin":"");
-  document.getElementById("admin-btn").style.display=isAdmin?"":"none";
+  document.getElementById("admin-btn").style.display=isAdmin?"inline-flex":"none";
   authMessage("");
   await loadLib();
   await offerLegacyMigration();

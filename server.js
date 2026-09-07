@@ -15,6 +15,7 @@ const DATABASE_URL = process.env.DATABASE_URL;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const AI_KEY = process.env.ANTHROPIC_API_KEY || '';
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 
 if (!DATABASE_URL) {
   console.error('ERRO: DATABASE_URL nao configurada. Adicione PostgreSQL ao projeto Railway.');
@@ -36,6 +37,15 @@ const pool = new Pool({
 async function initDatabase() {
   const sql = fs.readFileSync(path.join(__dirname, 'db', 'init.sql'), 'utf8');
   await pool.query(sql);
+  if (ADMIN_EMAIL) {
+    const promoted = await pool.query(
+      `UPDATE users SET role='admin', is_active=TRUE
+       WHERE LOWER(email)=LOWER($1) AND (role <> 'admin' OR is_active=FALSE)
+       RETURNING id,email`,
+      [ADMIN_EMAIL]
+    );
+    if (promoted.rowCount) console.log(`Administrador promovido: ${ADMIN_EMAIL}`);
+  }
   console.log('Banco Cifra-Musica pronto.');
 }
 
@@ -89,6 +99,25 @@ function requireAuth(req, res, next) {
   next();
 }
 
+async function requireAdmin(req, res, next) {
+  try {
+    if (!req.session?.userId) return res.status(401).json({ error: 'Sessao expirada. Entre novamente.' });
+    const result = await pool.query('SELECT id,email,role,is_active FROM users WHERE id=$1 LIMIT 1', [req.session.userId]);
+    const user = result.rows[0];
+    if (!user || !user.is_active) return res.status(401).json({ error: 'Conta indisponivel.' });
+    if (ADMIN_EMAIL && String(user.email).toLowerCase() === ADMIN_EMAIL && user.role !== 'admin') {
+      await pool.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
+      user.role = 'admin';
+    }
+    if (user.role !== 'admin') return res.status(403).json({ error: 'Acesso exclusivo do administrador.' });
+    req.adminUser = user;
+    next();
+  } catch (err) {
+    console.error('requireAdmin', err);
+    res.status(500).json({ error: 'Nao foi possivel validar o administrador.' });
+  }
+}
+
 function publicUser(row) {
   return { id: row.id, name: row.name, email: row.email, role: row.role };
 }
@@ -119,10 +148,11 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     if (exists.rowCount) return res.status(409).json({ error: 'Ja existe uma conta com este e-mail.' });
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const role = ADMIN_EMAIL && email === ADMIN_EMAIL ? 'admin' : 'user';
     const result = await pool.query(
-      `INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3)
+      `INSERT INTO users(name,email,password_hash,role) VALUES($1,$2,$3,$4)
        RETURNING id,name,email,role`,
-      [name, email, passwordHash]
+      [name, email, passwordHash, role]
     );
     req.session.userId = result.rows[0].id;
     res.status(201).json({ user: publicUser(result.rows[0]) });
@@ -143,6 +173,10 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     const user = result.rows[0];
     if (!user || !user.is_active || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
+    }
+    if (ADMIN_EMAIL && String(user.email).toLowerCase() === ADMIN_EMAIL && user.role !== 'admin') {
+      await pool.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
+      user.role = 'admin';
     }
     req.session.userId = user.id;
     res.json({ user: publicUser(user) });
@@ -166,10 +200,79 @@ app.get('/api/auth/me', async (req, res) => {
     );
     const user = result.rows[0];
     if (!user || !user.is_active) return res.status(401).json({ error: 'Conta nao encontrada.' });
+    if (ADMIN_EMAIL && String(user.email).toLowerCase() === ADMIN_EMAIL && user.role !== 'admin') {
+      await pool.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
+      user.role = 'admin';
+    }
     res.json({ user: publicUser(user) });
   } catch (err) {
     console.error('me', err);
     res.status(500).json({ error: 'Nao foi possivel validar a sessao.' });
+  }
+});
+
+
+
+// ══════════════════════════════════════════════════════
+// ADMINISTRACAO DE USUARIOS
+// ══════════════════════════════════════════════════════
+app.get('/api/admin/users', requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.id,u.name,u.email,u.role,u.is_active,u.created_at,u.updated_at,
+             COUNT(c.id)::int AS cifra_count
+      FROM users u
+      LEFT JOIN cifras c ON c.user_id=u.id
+      GROUP BY u.id,u.name,u.email,u.role,u.is_active,u.created_at,u.updated_at
+      ORDER BY u.created_at DESC
+    `);
+    const users = result.rows;
+    res.json({
+      users,
+      summary: {
+        total: users.length,
+        active: users.filter(x => x.is_active).length,
+        blocked: users.filter(x => !x.is_active).length,
+        admins: users.filter(x => x.role === 'admin').length,
+        cifras: users.reduce((sum, x) => sum + Number(x.cifra_count || 0), 0)
+      }
+    });
+  } catch (err) {
+    console.error('admin users', err);
+    res.status(500).json({ error: 'Erro ao carregar usuarios.' });
+  }
+});
+
+app.patch('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const targetId = cleanString(req.params.id, 80);
+    const found = await pool.query('SELECT id,name,email,role,is_active FROM users WHERE id=$1 LIMIT 1', [targetId]);
+    const target = found.rows[0];
+    if (!target) return res.status(404).json({ error: 'Usuario nao encontrado.' });
+
+    let role = target.role;
+    let isActive = target.is_active;
+    if (req.body?.role !== undefined) {
+      if (!['user', 'admin'].includes(req.body.role)) return res.status(400).json({ error: 'Perfil invalido.' });
+      role = req.body.role;
+    }
+    if (req.body?.is_active !== undefined) isActive = Boolean(req.body.is_active);
+
+    const isSelf = String(target.id) === String(req.session.userId);
+    const isMainAdmin = ADMIN_EMAIL && String(target.email).toLowerCase() === ADMIN_EMAIL;
+    if ((isSelf || isMainAdmin) && (!isActive || role !== 'admin')) {
+      return res.status(400).json({ error: 'O administrador principal nao pode ser bloqueado nem rebaixado.' });
+    }
+
+    const result = await pool.query(
+      `UPDATE users SET role=$1,is_active=$2 WHERE id=$3
+       RETURNING id,name,email,role,is_active,created_at,updated_at`,
+      [role, isActive, targetId]
+    );
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    console.error('admin update user', err);
+    res.status(500).json({ error: 'Erro ao atualizar usuario.' });
   }
 });
 

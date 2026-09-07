@@ -1,0 +1,24 @@
+COMO TROCAR O REPOSITORIO ATUAL PARA A VERSAO RAILWAY
+
+Seu repositorio cifra-musica hoje tem a versao antiga de GitHub Pages/Supabase.
+Para a nova versao, deixe o repositorio assim:
+
+server.js
+package.json
+railway.json
+.env.example
+.gitignore
+README.md
+LEIA-ME-PRIMEIRO.txt
+MIGRACAO-DO-REPOSITORIO.txt
+db/init.sql
+public/index.html
+
+REMOVA os arquivos antigos que nao sao usados mais:
+- index.html da RAIZ (o novo fica dentro de public/)
+- config.js
+- supabase_setup.sql
+- .nojekyll (nao e mais necessario)
+
+Depois suba os arquivos/pastas desta versao e faca o commit.
+O Railway detectara o package.json e executara npm start.

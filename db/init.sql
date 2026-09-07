@@ -25,6 +25,27 @@ CREATE TABLE IF NOT EXISTS cifras (
 
 CREATE INDEX IF NOT EXISTS cifras_user_updated_idx ON cifras(user_id, updated_at DESC);
 
+CREATE TABLE IF NOT EXISTS cantores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(120) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS cantores_user_name_lower_uidx ON cantores(user_id, LOWER(name));
+CREATE INDEX IF NOT EXISTS cantores_user_name_idx ON cantores(user_id, name);
+
+CREATE TABLE IF NOT EXISTS cifra_cantores (
+  cifra_id UUID NOT NULL REFERENCES cifras(id) ON DELETE CASCADE,
+  cantor_id UUID NOT NULL REFERENCES cantores(id) ON DELETE CASCADE,
+  tone VARCHAR(20),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (cifra_id, cantor_id)
+);
+
+CREATE INDEX IF NOT EXISTS cifra_cantores_cantor_idx ON cifra_cantores(cantor_id);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -41,4 +62,10 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 DROP TRIGGER IF EXISTS cifras_set_updated_at ON cifras;
 CREATE TRIGGER cifras_set_updated_at
 BEFORE UPDATE ON cifras
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+DROP TRIGGER IF EXISTS cantores_set_updated_at ON cantores;
+CREATE TRIGGER cantores_set_updated_at
+BEFORE UPDATE ON cantores
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();

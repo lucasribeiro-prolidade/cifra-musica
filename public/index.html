@@ -253,6 +253,44 @@ body:not(.auth-pending) .auth-screen{display:none}
 @media(max-width:620px){.group-btn-label{display:none}.group-card,.folder-card,.shared-song{align-items:flex-start}.group-member{align-items:flex-start}.group-member-actions,.shared-actions,.folder-actions{justify-content:flex-end}.group-invite-row select{max-width:110px}}
 
 
+/* v4.1 — home + visualização mobile-first */
+.home-header-btn{color:#f5c842;border-color:#5a4000;background:#2a1f00}
+.home-screen{display:none}
+.home-welcome{background:linear-gradient(145deg,#1c1917,#171619);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px}
+.home-welcome h2{font-family:var(--serif);color:var(--gold2);font-size:22px;margin-bottom:5px}
+.home-welcome p{color:var(--muted);font-size:13px;line-height:1.5}
+.home-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.home-card{min-height:112px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px;text-align:left;color:var(--text);display:flex;flex-direction:column;justify-content:space-between;gap:8px;transition:.15s}
+.home-card:hover{border-color:#4a4339;background:#211f1c}
+.home-card-icon{font-size:25px}.home-card-title{font-weight:800;font-size:15px}.home-card-sub{font-size:11px;color:var(--muted);line-height:1.4}
+.home-current{display:none;margin-top:12px;background:#17243d;border:1px solid #2a4070;border-radius:12px;padding:12px 14px}
+.home-current.on{display:flex;align-items:center;gap:10px}.home-current-info{flex:1;min-width:0}.home-current-title{font-weight:700;color:#bdd7f5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.home-current-sub{font-size:11px;color:#7188a5;margin-top:2px}
+.viewer-toolbar{display:flex;gap:8px;margin-bottom:12px}.viewer-toolbar .btn{flex:1;padding:9px 10px;font-size:12px}
+.manual-editor-card{display:none}.manual-editor-card.open{display:block}
+.preview-actions{margin-top:4px}
+.preview-box{scroll-margin-top:118px}
+.manual-editor-card{scroll-margin-top:118px}
+@media(max-width:620px){
+  main{padding:10px 10px 88px}
+  .hdr{padding:7px 9px;gap:7px}
+  .logo{gap:7px}.logo-icon{width:34px;height:34px}.logo-name{font-size:16px}.logo-sub{display:none}
+  .cloud-chip{display:none}.user-menu{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;max-width:calc(100vw - 150px);padding-bottom:1px;scrollbar-width:none}.user-menu::-webkit-scrollbar{display:none}
+  .user-menu .btn-sm{flex:0 0 auto;white-space:nowrap;padding:7px 9px}.home-header-btn .home-label{display:none}
+  .tabs{position:sticky;top:55px;z-index:90;background:rgba(17,16,19,.96);backdrop-filter:blur(8px);padding:6px 0;margin-bottom:10px}
+  .tab{font-size:12px;padding:10px 3px}
+  .title-input{font-size:17px;margin-bottom:9px;padding:11px 12px}
+  .home-welcome{padding:16px 14px}.home-welcome h2{font-size:20px}
+  .home-grid{grid-template-columns:1fr 1fr;gap:8px}.home-card{min-height:104px;padding:13px}.home-card-icon{font-size:23px}
+  .viewer-toolbar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.viewer-toolbar .btn{min-width:0;padding:10px 4px;font-size:11px}
+  .transpose-bar{padding:10px;gap:6px}.transpose-bar .spacer{display:none}.tone-select{margin-left:auto}
+  .preview-box{padding:12px 10px;margin-bottom:10px;border-radius:10px}.preview-label{font-size:10px;margin-bottom:7px}.cifra-display{font-size:13px;line-height:1.35}
+  .singer-card{margin-top:10px;margin-bottom:10px}.singer-card-sub{display:none}
+  .manual-editor-card textarea.editor{min-height:330px}
+  .preview-actions{position:sticky;bottom:8px;z-index:85;background:rgba(17,16,19,.94);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:12px;padding:7px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+  .preview-actions .btn{padding:10px 7px;font-size:12px;min-width:0}
+}
+@media(max-width:380px){.home-grid{grid-template-columns:1fr}.user-menu{max-width:calc(100vw - 132px)}.viewer-toolbar .btn{font-size:10px}}
+
 </style>
 </head>
 <body class="auth-pending">
@@ -295,6 +333,7 @@ body:not(.auth-pending) .auth-screen{display:none}
     </div>
     <div class="user-menu">
       <span class="cloud-chip" title="Sincronizado na nuvem"><span class="cloud-dot"></span> Nuvem</span>
+      <button class="btn-sm home-header-btn" onclick="goHome()" title="Tela inicial">🏠 <span class="home-label">Início</span></button>
       <span class="user-chip" id="user-chip"></span>
       <button class="btn-sm admin-btn" id="admin-btn" onclick="openAdmin()" title="Administrar usuários">👑 Admin</button>
       <button class="btn-sm" onclick="logoutUser()" title="Sair">Sair</button>
@@ -313,6 +352,26 @@ body:not(.auth-pending) .auth-screen{display:none}
 </header>
 
 <main>
+  <section class="home-screen" id="home-screen">
+    <div class="home-welcome">
+      <h2>O que você quer fazer?</h2>
+      <p>Abra seu repertório, encontre uma música ou continue de onde parou.</p>
+    </div>
+    <div class="home-grid">
+      <button class="home-card" onclick="newCifra()"><span class="home-card-icon">➕</span><span><span class="home-card-title">Nova cifra</span><br><span class="home-card-sub">Colar, importar ou criar uma nova música.</span></span></button>
+      <button class="home-card" onclick="openLibrary()"><span class="home-card-icon">📚</span><span><span class="home-card-title">Minha biblioteca</span><br><span class="home-card-sub"><strong id="home-lib-count">0</strong> cifra(s) salvas na nuvem.</span></span></button>
+      <button class="home-card" onclick="openGroups()"><span class="home-card-icon">👥</span><span><span class="home-card-title">Grupos</span><br><span class="home-card-sub">Pastas e repertórios compartilhados.</span></span></button>
+      <button class="home-card" onclick="openSingers()"><span class="home-card-icon">🎤</span><span><span class="home-card-title">Cantores</span><br><span class="home-card-sub">Cadastre cantores e seus tons.</span></span></button>
+      <button class="home-card" onclick="switchTab('search')"><span class="home-card-icon">🔍</span><span><span class="home-card-title">Buscar música</span><br><span class="home-card-sub">Use a IA para localizar e organizar uma cifra.</span></span></button>
+      <button class="home-card" onclick="switchTab('editor')"><span class="home-card-icon">✏️</span><span><span class="home-card-title">Colar / editar</span><br><span class="home-card-sub">Abra diretamente a área de edição.</span></span></button>
+    </div>
+    <div class="home-current" id="home-current">
+      <div class="home-current-info"><div class="home-current-title" id="home-current-title">Música atual</div><div class="home-current-sub">Continue a cifra que estava aberta.</div></div>
+      <button class="btn-sm" onclick="switchTab('preview')">Continuar →</button>
+    </div>
+  </section>
+
+  <div id="workspace" style="display:none">
   <input type="text" class="title-input" id="song-title" placeholder="Título da música...">
   <div class="share-context" id="share-context-banner"></div>
 
@@ -377,6 +436,11 @@ body:not(.auth-pending) .auth-screen{display:none}
 
   <!-- VISUALIZAR -->
   <div id="panel-preview" style="display:none">
+    <div class="viewer-toolbar">
+      <button class="btn btn-dark" onclick="goHome()">🏠 Início</button>
+      <button class="btn btn-dark" onclick="openLibrary()">📚 Biblioteca</button>
+      <button class="btn btn-gold" id="edit-toggle-btn" onclick="openManualEditor()">✏️ Editar cifra</button>
+    </div>
     <!-- Transpose -->
     <div class="transpose-bar">
       <span style="font-size:13px;color:var(--muted);font-weight:500">Tom:</span>
@@ -393,6 +457,12 @@ body:not(.auth-pending) .auth-screen{display:none}
       </select>
     </div>
 
+    <!-- Cifra pronta para tocar -->
+    <div class="preview-box" id="preview-box" style="display:none">
+      <div class="preview-label">Cifra — acordes em vermelho</div>
+      <div class="cifra-display" id="cifra-display"></div>
+    </div>
+
     <!-- Cantores e tons -->
     <div class="singer-card">
       <div class="singer-card-top">
@@ -406,26 +476,21 @@ body:not(.auth-pending) .auth-screen{display:none}
       <div id="song-singer-list"><div class="song-singer-empty">Nenhum cantor vinculado a esta cifra.</div></div>
     </div>
 
-    <!-- Editor inline -->
-    <div class="card">
+    <!-- Editor manual — abre somente quando o usuário pedir -->
+    <div class="card manual-editor-card" id="manual-editor-card">
       <div class="card-hdr">
-        <span>Editor manual</span>
+        <span>✏️ Editor manual</span>
         <div style="display:flex;gap:6px">
           <button class="btn-sm" onclick="edFontSize(-1)">A-</button>
           <button class="btn-sm" onclick="edFontSize(1)">A+</button>
+          <button class="btn-sm" onclick="setManualEditor(false)">Fechar</button>
         </div>
       </div>
       <textarea class="editor" id="cifra-editor" oninput="onEdit()"></textarea>
     </div>
 
-    <!-- Preview render -->
-    <div class="preview-box" id="preview-box" style="display:none">
-      <div class="preview-label">Preview — acordes em vermelho</div>
-      <div class="cifra-display" id="cifra-display"></div>
-    </div>
-
     <!-- Actions -->
-    <div class="actions">
+    <div class="actions preview-actions">
       <button class="btn btn-blue" onclick="openPresentation()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Apresentar
       </button>
@@ -437,6 +502,7 @@ body:not(.auth-pending) .auth-screen{display:none}
       </button>
     </div>
     <button onclick="newCifra()" style="margin-top:10px;width:100%;background:transparent;border:1px dashed var(--border);color:var(--dim);border-radius:10px;padding:10px;font-size:13px;cursor:pointer">+ Nova cifra</button>
+  </div>
   </div>
 </main>
 
@@ -642,7 +708,7 @@ let currentUser=null,authMode="login",aiConfigured=false;
 let singers=[],currentSingerTones=[];
 let groups=[],groupView={mode:"list"},currentSharedContext=null,pendingShareRepertoireId=null,groupRefreshTimer=null;
 
-function updateCount(){document.getElementById("lib-count").textContent=library.length;}
+function updateCount(){document.getElementById("lib-count").textContent=library.length;const h=document.getElementById("home-lib-count");if(h)h.textContent=library.length;}
 function updateDot(){document.getElementById("api-dot").style.background=aiConfigured?"#22c55e":"#555";}
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
@@ -702,6 +768,7 @@ async function applyUser(user){
   await loadLib();
   await loadGroups();
   await offerLegacyMigration();
+  goHome();
 }
 async function initApp(){
   try{
@@ -1004,15 +1071,47 @@ function openApiModal(){document.getElementById("api-modal").classList.add("open
 function closeApiModal(){document.getElementById("api-modal").classList.remove("open");}
 
 // ══════════════════════════════════════════════════════
+// HOME / NAVEGAÇÃO MOBILE
+// ══════════════════════════════════════════════════════
+function updateHomeCurrent(){
+  const box=document.getElementById("home-current");if(!box)return;
+  const has=!!(currentCifraId||String(cifra||"").trim());
+  box.classList.toggle("on",has);
+  if(has){const t=document.getElementById("song-title")?.value?.trim()||"Cifra atual";document.getElementById("home-current-title").textContent=t;}
+}
+function goHome(){
+  ["library-overlay","singers-overlay","groups-overlay","admin-overlay"].forEach(id=>document.getElementById(id)?.classList.remove("open"));
+  setManualEditor(false);
+  const home=document.getElementById("home-screen"),work=document.getElementById("workspace");
+  if(home)home.style.display="block";if(work)work.style.display="none";
+  updateHomeCurrent();updateCount();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function setManualEditor(open){
+  const card=document.getElementById("manual-editor-card");if(!card)return;
+  card.classList.toggle("open",!!open);
+  const btn=document.getElementById("edit-toggle-btn");if(btn)btn.textContent=open?"✕ Fechar editor":"✏️ Editar cifra";
+}
+function openManualEditor(){
+  const card=document.getElementById("manual-editor-card");
+  if(card?.classList.contains("open")){setManualEditor(false);return;}
+  setManualEditor(true);
+  setTimeout(()=>card?.scrollIntoView({behavior:"smooth",block:"start"}),60);
+}
+
+// ══════════════════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════════════════
 function switchTab(tab){
+  const home=document.getElementById("home-screen"),work=document.getElementById("workspace");
+  if(home)home.style.display="none";if(work)work.style.display="";
   ["search","editor","preview"].forEach(t=>{
     document.getElementById("tab-"+t).classList.toggle("active",t===tab);
     document.getElementById("panel-"+t).style.display=t===tab?"":"none";
   });
-  if(tab==="preview")refreshPreview();
+  if(tab==="preview"){setManualEditor(false);refreshPreview();updateHomeCurrent();}
   if(tab==="search")document.getElementById("no-api-box").style.display=aiConfigured?"none":"";
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
 // ══════════════════════════════════════════════════════
@@ -1182,6 +1281,7 @@ function goDirectEdit(){
   cifra=raw;st=0;
   document.getElementById("cifra-editor").value=raw;
   switchTab("preview");
+  setTimeout(()=>openManualEditor(),80);
 }
 function onEdit(){cifra=document.getElementById("cifra-editor").value;st=0;refreshPreview();}
 function edFontSize(d){edFs=Math.min(26,Math.max(11,edFs+d));document.getElementById("cifra-editor").style.fontSize=edFs+"px";document.getElementById("cifra-display").style.fontSize=edFs+"px";}
@@ -1454,7 +1554,7 @@ function presFontSize(d){pfz=Math.min(48,Math.max(8,pfz+d));document.getElementB
 function newCifra(){
   cifra="";st=0;currentCifraId=null;currentSingerTones=[];currentSharedContext=null;pendingShareRepertoireId=null;
   ["raw-input","cifra-editor","song-title"].forEach(id=>document.getElementById(id).value="");
-  setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();
+  setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();setManualEditor(false);updateHomeCurrent();
   switchTab("editor");
 }
 

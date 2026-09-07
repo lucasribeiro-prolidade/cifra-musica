@@ -223,6 +223,36 @@ body:not(.auth-pending) .auth-screen{display:none}
 @media(max-width:620px){.singer-btn-label{display:none}.song-singer-row{grid-template-columns:minmax(0,1fr) 70px auto}.song-singer-row .singer-remove-text{display:none}.singer-card{padding:11px}.hdr{height:auto;min-height:56px;padding-top:7px;padding-bottom:7px}.user-menu{flex-wrap:wrap;justify-content:flex-end}}
 
 
+/* grupos compartilhados */
+.group-btn{color:#93c5fd;border-color:#2a4070;background:#17243d}
+.group-drawer{max-width:840px}
+.group-top-actions{display:flex;gap:7px;align-items:center}
+.group-section{padding:14px 16px;border-bottom:1px solid var(--border2)}
+.group-section-title{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);font-weight:700;margin-bottom:9px}
+.group-create-row,.group-invite-row,.group-folder-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.group-create-row input,.group-invite-row input,.group-folder-row input,.group-invite-row select,.group-lib-select{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--text);font-size:13px}
+.group-create-row input,.group-invite-row input,.group-folder-row input{flex:1;min-width:170px}
+.group-card,.folder-card,.group-member,.shared-song{padding:13px 16px;border-bottom:1px solid var(--border2);display:flex;gap:10px;align-items:center}
+.group-card:hover,.folder-card:hover,.shared-song:hover{background:#211f1c}
+.group-card-info,.folder-info,.shared-info,.member-info{flex:1;min-width:0}
+.group-name,.folder-name,.shared-title,.member-name{font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.group-meta,.folder-meta,.shared-meta,.member-meta{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.45}
+.group-role{display:inline-flex;font-size:10px;border-radius:999px;padding:3px 7px;font-weight:700;border:1px solid #2e4a6a;background:#1d2a3a;color:#bdd7f5}
+.group-role.admin{background:#2a1f00;border-color:#5a4000;color:#f5c842}.group-role.editor{background:#1d2a3a;border-color:#2e4a6a;color:#93c5fd}.group-role.viewer{background:#252220;border-color:#3a3630;color:#aaa}
+.group-hero{padding:14px 16px;background:#151518;border-bottom:1px solid var(--border2)}
+.group-hero h3{font-family:var(--serif);color:var(--gold2);font-size:20px;margin-bottom:4px}.group-hero p{font-size:12px;color:var(--muted);line-height:1.5}
+.group-member-actions,.shared-actions,.folder-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.group-member select{background:#252220;border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px;font-size:11px}
+.pending-invite{padding:10px 16px;background:#211d12;border-bottom:1px solid #403615;display:flex;gap:10px;align-items:center}.pending-invite .member-meta{color:#b49c64}
+.activity-item{padding:9px 16px;border-bottom:1px solid var(--border2);font-size:12px;color:#aaa;line-height:1.45}.activity-item strong{color:var(--text)}.activity-time{color:var(--dim);font-size:10px;margin-top:2px}
+.share-context{display:none;margin:-3px 0 12px;background:#17243d;border:1px solid #2a4070;color:#bdd7f5;border-radius:10px;padding:9px 12px;font-size:12px;line-height:1.45}
+.share-context.on{display:block}.share-context.readonly{background:#252220;border-color:#3a3630;color:#aaa}
+.shared-owner{color:#93c5fd}.shared-song .singer-line{color:#c4b5fd}
+.group-empty{padding:28px 16px;text-align:center;color:var(--dim);font-size:13px}
+.group-refresh-note{font-size:10px;color:var(--dim);padding:8px 16px;text-align:center}
+@media(max-width:620px){.group-btn-label{display:none}.group-card,.folder-card,.shared-song{align-items:flex-start}.group-member{align-items:flex-start}.group-member-actions,.shared-actions,.folder-actions{justify-content:flex-end}.group-invite-row select{max-width:110px}}
+
+
 </style>
 </head>
 <body class="auth-pending">
@@ -272,6 +302,7 @@ body:not(.auth-pending) .auth-screen{display:none}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
         <span id="api-dot" style="width:7px;height:7px;border-radius:50%;background:#555;display:inline-block"></span> IA
       </button>
+      <button class="btn-sm group-btn" onclick="openGroups()" title="Grupos e repertórios compartilhados">👥 <span class="group-btn-label">Grupos</span></button>
       <button class="btn-sm singer-btn" onclick="openSingers()" title="Cadastrar cantores">🎤 <span class="singer-btn-label">Cantores</span></button>
       <button class="btn-sm" onclick="openLibrary()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M4,19.5A2.5,2.5,0,0,1,6.5,17H20"/><path d="M6.5,2H20V22H6.5A2.5,2.5,0,0,1,4,19.5V4.5A2.5,2.5,0,0,1,6.5,2Z"/></svg>
@@ -283,6 +314,7 @@ body:not(.auth-pending) .auth-screen{display:none}
 
 <main>
   <input type="text" class="title-input" id="song-title" placeholder="Título da música...">
+  <div class="share-context" id="share-context-banner"></div>
 
   <div class="tabs">
     <button class="tab" id="tab-search" onclick="switchTab('search')">🔍 Buscar</button>
@@ -397,7 +429,7 @@ body:not(.auth-pending) .auth-screen{display:none}
       <button class="btn btn-blue" onclick="openPresentation()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Apresentar
       </button>
-      <button class="btn btn-green" onclick="saveCifra()">
+      <button class="btn btn-green" id="save-cifra-btn" onclick="saveCifra()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M19,21H5a2,2,0,0,1-2-2V5a2,2,0,0,1,2-2H16l5,5V19A2,2,0,0,1,19,21Z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>Salvar
       </button>
       <button class="btn btn-red" onclick="exportPDF()">
@@ -436,6 +468,25 @@ body:not(.auth-pending) .auth-screen{display:none}
       </div>
     </div>
     <div class="drawer-body" id="lib-body"></div>
+  </div>
+</div>
+
+
+<!-- GRUPOS / REPERTORIOS COMPARTILHADOS -->
+<div class="drawer-overlay" id="groups-overlay" onclick="closeGroups()">
+  <div class="drawer group-drawer" onclick="event.stopPropagation()">
+    <div class="drawer-hdr">
+      <span id="groups-title">👥 Meus Grupos</span>
+      <div class="group-top-actions">
+        <button class="btn-sm" id="groups-back" style="display:none" onclick="groupBack()">← Voltar</button>
+        <button class="btn-sm" onclick="refreshGroupView()">↻ Atualizar</button>
+        <button style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px" onclick="closeGroups()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="drawer-body" id="groups-body"><div class="group-empty">Carregando grupos...</div></div>
+    <div class="group-refresh-note">Atualização automática a cada 30 segundos enquanto esta tela estiver aberta.</div>
   </div>
 </div>
 
@@ -589,6 +640,7 @@ let cifra="",st=0,edFs=14,library=[],lastResult="",currentCifraId=null,migration
 const LKEY="cifras_igreja_v1";
 let currentUser=null,authMode="login",aiConfigured=false;
 let singers=[],currentSingerTones=[];
+let groups=[],groupView={mode:"list"},currentSharedContext=null,pendingShareRepertoireId=null,groupRefreshTimer=null;
 
 function updateCount(){document.getElementById("lib-count").textContent=library.length;}
 function updateDot(){document.getElementById("api-dot").style.background=aiConfigured?"#22c55e":"#555";}
@@ -631,9 +683,9 @@ async function submitAuth(){
 }
 async function logoutUser(){
   try{await apiFetch("/api/auth/logout",{method:"POST"});}catch{}
-  currentUser=null;library=[];singers=[];currentSingerTones=[];currentCifraId=null;updateCount();
+  currentUser=null;library=[];singers=[];currentSingerTones=[];groups=[];currentCifraId=null;currentSharedContext=null;pendingShareRepertoireId=null;updateCount();
   document.getElementById("admin-btn").style.display="none";
-  closeAdmin();closeSingers();
+  closeAdmin();closeSingers();closeGroups();
   document.body.classList.add("auth-pending");
   document.getElementById("auth-password").value="";
   authMessage("");
@@ -648,6 +700,7 @@ async function applyUser(user){
   authMessage("");
   await loadSingers();
   await loadLib();
+  await loadGroups();
   await offerLegacyMigration();
 }
 async function initApp(){
@@ -673,7 +726,7 @@ async function loadLib(){
   if(!currentUser){library=[];updateCount();return;}
   try{
     const data=await apiFetch("/api/cifras");
-    library=(data.items||[]).map(x=>({id:x.id,title:x.title,tone:x.tone,text:x.text,singers:Array.isArray(x.singers)?x.singers:[],date:x.updated_at||x.created_at}));
+    library=(data.items||[]).map(x=>({id:x.id,title:x.title,tone:x.tone,text:x.text,singers:Array.isArray(x.singers)?x.singers:[],shared_count:Number(x.shared_count||0),date:x.updated_at||x.created_at}));
     updateCount();
   }catch(e){toast("Erro ao carregar cifras: "+e.message,1);}
 }
@@ -706,7 +759,7 @@ async function loadSingers(){
   try{
     const data=await apiFetch("/api/cantores");
     singers=(data.items||[]).map(x=>({id:x.id,name:x.name,cifra_count:Number(x.cifra_count||0)}));
-    currentSingerTones=currentSingerTones.filter(x=>singers.some(s=>s.id===x.singer_id));
+    currentSingerTones=currentSingerTones.map(x=>{const s=singers.find(a=>a.id===x.singer_id);return s?{...x,name:s.name}:x;});
     renderSingerAssignments();
     renderSingerManager();
   }catch(e){toast("Erro ao carregar cantores: "+e.message,1);}
@@ -746,37 +799,141 @@ function toneOptions(selected=""){
 function currentDisplayedTone(){
   const k=detectKey(cifra);return k?TONES[((NMAP[k]+st)%12+12)%12]:"";
 }
+function isCurrentReadOnly(){return Boolean(currentSharedContext && !currentSharedContext.can_edit);}
+function setCurrentEditAccess(canEdit=true){
+  const ro=!canEdit;
+  const title=document.getElementById("song-title"),ed=document.getElementById("cifra-editor"),save=document.getElementById("save-cifra-btn");
+  if(title)title.readOnly=ro;if(ed)ed.readOnly=ro;
+  if(save){save.disabled=ro;save.style.opacity=ro?".45":"";save.title=ro?"Somente visualização neste grupo":"";}
+  renderSingerAssignments();renderShareContextBanner();
+}
+function renderShareContextBanner(){
+  const el=document.getElementById("share-context-banner");if(!el)return;
+  if(pendingShareRepertoireId){
+    const rep=groupView?.repertoire;
+    el.className="share-context on";
+    el.innerHTML=`👥 Ao salvar, esta música será compartilhada em <strong>${esc(rep?.group_name||"Grupo")}</strong> / <strong>${esc(rep?.name||"Pasta")}</strong>.`;
+    return;
+  }
+  if(currentSharedContext){
+    el.className="share-context on"+(currentSharedContext.can_edit?"":" readonly");
+    el.innerHTML=`👥 Música compartilhada em <strong>${esc(currentSharedContext.group_name||"Grupo")}</strong> / <strong>${esc(currentSharedContext.repertoire_name||"Pasta")}</strong> · ${currentSharedContext.can_edit?"Você pode editar; as mudanças aparecem para todos.":"Somente visualização."}`;
+    return;
+  }
+  el.className="share-context";el.innerHTML="";
+}
 function renderSingerAssignments(){
   const select=document.getElementById("song-singer-select");const body=document.getElementById("song-singer-list");if(!select||!body)return;
+  const readOnly=isCurrentReadOnly();
   const used=new Set(currentSingerTones.map(x=>x.singer_id));
   const available=singers.filter(x=>!used.has(x.id));
+  select.disabled=readOnly;
   select.innerHTML='<option value="">Selecione um cantor...</option>'+available.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  const addBtn=select.parentElement?.querySelector("button");if(addBtn)addBtn.disabled=readOnly;
   if(!currentSingerTones.length){
     body.innerHTML=singers.length?'<div class="song-singer-empty">Nenhum cantor vinculado a esta cifra.</div>':'<div class="song-singer-empty">Cadastre seus cantores em 🎤 Cantores e depois vincule aqui.</div>';
     return;
   }
   body.innerHTML=currentSingerTones.map((x,i)=>{
-    const singer=singers.find(s=>s.id===x.singer_id);if(!singer)return '';
+    const singer=singers.find(s=>s.id===x.singer_id);const singerName=singer?.name||x.name||"Cantor";
     return `<div class="song-singer-row">
-      <div class="song-singer-name">${esc(singer.name)}</div>
-      <select class="singer-tone-select" onchange="setSingerTone(${i},this.value)">${toneOptions(x.tone||"")}</select>
+      <div class="song-singer-name">${esc(singerName)}</div>
+      <select class="singer-tone-select" ${readOnly?'disabled':''} onchange="setSingerTone(${i},this.value)">${toneOptions(x.tone||"")}</select>
       <button class="btn-sm" ${x.tone?'':'disabled style="opacity:.45"'} onclick="useSingerTone('${x.tone||""}')">Usar tom</button>
-      <button class="btn-sm" style="color:#fca5a5" onclick="removeSingerFromSong(${i})">✕ <span class="singer-remove-text">Remover</span></button>
+      <button class="btn-sm" ${readOnly?'disabled style="opacity:.4"':'style="color:#fca5a5"'} onclick="removeSingerFromSong(${i})">✕ <span class="singer-remove-text">Remover</span></button>
     </div>`;
   }).join("");
 }
 function addSingerToSong(){
+  if(isCurrentReadOnly()){toast("Você tem acesso somente para visualizar esta música.",1);return;}
   const select=document.getElementById("song-singer-select");const id=select.value;if(!id){toast("Selecione um cantor.",1);return;}
   if(currentSingerTones.some(x=>x.singer_id===id))return;
-  currentSingerTones.push({singer_id:id,tone:currentDisplayedTone()||""});renderSingerAssignments();
+  const singer=singers.find(s=>s.id===id);
+  currentSingerTones.push({singer_id:id,name:singer?.name||"",tone:currentDisplayedTone()||""});renderSingerAssignments();
 }
-function setSingerTone(index,tone){if(!currentSingerTones[index])return;currentSingerTones[index].tone=tone||"";renderSingerAssignments();}
-function removeSingerFromSong(index){currentSingerTones.splice(index,1);renderSingerAssignments();}
+function setSingerTone(index,tone){if(isCurrentReadOnly())return;if(!currentSingerTones[index])return;currentSingerTones[index].tone=tone||"";renderSingerAssignments();}
+function removeSingerFromSong(index){if(isCurrentReadOnly())return;currentSingerTones.splice(index,1);renderSingerAssignments();}
 function useSingerTone(tone){
   if(!tone){toast("Defina o tom deste cantor primeiro.",1);return;}
   const k=detectKey(cifra);if(!k){toast("Nenhum acorde detectado na cifra.",1);return;}
   st=((NMAP[tone]-NMAP[k])%12+12)%12;refreshPreview();toast("🎤 Cifra ajustada para o tom "+tone);
 }
+
+// ══════════════════════════════════════════════════════
+// V4 - GRUPOS / REPERTORIOS COMPARTILHADOS
+// ══════════════════════════════════════════════════════
+function groupRoleLabel(role){return role==="admin"?"ADMIN":role==="editor"?"EDITOR":"VISUALIZADOR";}
+function groupRoleClass(role){return ["admin","editor","viewer"].includes(role)?role:"viewer";}
+async function loadGroups(){
+  if(!currentUser){groups=[];return;}
+  try{const data=await apiFetch("/api/groups");groups=data.items||[];}catch(e){console.warn("groups",e.message);}
+}
+function openGroups(){
+  document.getElementById("groups-overlay").classList.add("open");
+  groupView={mode:"list"};
+  loadGroups().then(renderGroupList);
+  clearInterval(groupRefreshTimer);groupRefreshTimer=setInterval(()=>{if(document.getElementById("groups-overlay")?.classList.contains("open"))refreshGroupView(true);},30000);
+}
+function closeGroups(){document.getElementById("groups-overlay")?.classList.remove("open");clearInterval(groupRefreshTimer);groupRefreshTimer=null;}
+function setGroupHeader(title,back=false){document.getElementById("groups-title").textContent=title;document.getElementById("groups-back").style.display=back?"":"none";}
+function renderGroupList(){
+  setGroupHeader("👥 Meus Grupos",false);groupView.mode="list";
+  const body=document.getElementById("groups-body");
+  body.innerHTML=`<div class="group-section"><div class="group-section-title">Criar novo grupo</div><div class="group-create-row"><input id="new-group-name" maxlength="160" placeholder="Ex.: Banda Nova Aliança" onkeydown="if(event.key==='Enter')createGroup()"><button class="btn btn-blue" style="padding:9px 13px" onclick="createGroup()">+ Criar grupo</button></div></div>`+
+    (groups.length?groups.map(g=>`<div class="group-card"><div class="group-card-info"><div class="group-name">${esc(g.name)}</div><div class="group-meta">${Number(g.member_count||0)} integrante(s) · ${Number(g.repertoire_count||0)} pasta(s) · ${Number(g.song_count||0)} música(s)</div></div><span class="group-role ${groupRoleClass(g.role)}">${groupRoleLabel(g.role)}</span><button class="btn-sm" onclick="openGroup('${g.id}')">Abrir</button></div>`).join(""):'<div class="group-empty">Você ainda não participa de nenhum grupo.</div>');
+}
+async function createGroup(){
+  const input=document.getElementById("new-group-name");const name=input?.value.trim();if(!name){toast("Informe o nome do grupo.",1);return;}
+  try{const data=await apiFetch("/api/groups",{method:"POST",body:JSON.stringify({name})});toast("👥 Grupo criado!");await loadGroups();await openGroup(data.group.id);}catch(e){toast(e.message||"Erro ao criar grupo.",1);}
+}
+async function openGroup(id,silent=false){
+  try{const data=await apiFetch("/api/groups/"+encodeURIComponent(id));groupView={mode:"group",detail:data};renderGroupDetail();}catch(e){if(!silent)toast(e.message||"Erro ao abrir grupo.",1);}
+}
+function activityText(a){
+  const d=a.details||{};const who=esc(a.user_name||a.user_email||"Alguém");
+  const map={group_created:`criou o grupo ${esc(d.name||"")}`,group_updated:`atualizou o grupo`,member_added:`adicionou ${esc(d.name||d.email||"um integrante")}`,invite_created:`convidou ${esc(d.email||"um integrante")}`,invite_accepted:`entrou no grupo`,member_left:`saiu do grupo`,member_removed:`removeu um integrante`,member_role_changed:`alterou a permissão de um integrante`,repertoire_created:`criou a pasta ${esc(d.name||"")}`,repertoire_updated:`renomeou/alterou uma pasta`,repertoire_deleted:`excluiu a pasta ${esc(d.name||"")}`,song_added:`adicionou ${esc(d.title||"uma música")} em ${esc(d.repertoire||"uma pasta")}`,song_removed:`removeu ${esc(d.title||"uma música")} de ${esc(d.repertoire||"uma pasta")}`,song_updated:`atualizou ${esc(d.title||"uma música")}`};
+  return `<strong>${who}</strong> ${map[a.action]||"fez uma alteração no grupo"}`;
+}
+function renderGroupDetail(){
+  const d=groupView.detail;if(!d)return;const g=d.group;setGroupHeader("👥 "+g.name,true);
+  const canWrite=!!d.can_write,canAdmin=!!d.can_admin;
+  let html=`<div class="group-hero"><h3>${esc(g.name)}</h3><p>${esc(g.description||"Grupo compartilhado de músicas e repertórios.")} <span class="group-role ${groupRoleClass(g.role)}">${groupRoleLabel(g.role)}</span></p>${canAdmin?'<div style="margin-top:8px"><button class="btn-sm" onclick="renameGroup()">Editar nome</button></div>':''}</div>`;
+  html+=`<div class="group-section"><div class="group-section-title">Pastas / repertórios</div>${canWrite?'<div class="group-folder-row" style="margin-bottom:9px"><input id="new-folder-name" maxlength="160" placeholder="Nova pasta..." onkeydown="if(event.key===\'Enter\')createRepertoire()"><button class="btn-sm" onclick="createRepertoire()">+ Criar pasta</button></div>':''}</div>`;
+  html+=(d.repertoires||[]).length?(d.repertoires||[]).map(r=>`<div class="folder-card"><div class="folder-info"><div class="folder-name">📁 ${esc(r.name)}</div><div class="folder-meta">${Number(r.song_count||0)} música(s)${r.description?' · '+esc(r.description):''}</div></div><div class="folder-actions"><button class="btn-sm" onclick="openRepertoire('${r.id}')">Abrir</button>${canWrite?`<button class="btn-sm" onclick="renameRepertoire('${r.id}')">Editar</button><button class="btn-sm" style="color:#fca5a5" onclick="deleteRepertoire('${r.id}')">Excluir</button>`:''}</div></div>`).join(""):'<div class="group-empty">Nenhuma pasta criada.</div>';
+  html+=`<div class="group-section"><div class="group-section-title">Integrantes (${(d.members||[]).length})</div>${canAdmin?`<div class="group-invite-row"><input id="invite-email" type="email" placeholder="E-mail do integrante"><select id="invite-role"><option value="viewer">Visualizador</option><option value="editor">Editor</option><option value="admin">Admin do grupo</option></select><button class="btn-sm" onclick="inviteGroupMember()">Convidar</button></div>`:''}</div>`;
+  html+=(d.members||[]).map(m=>`<div class="group-member"><div class="member-info"><div class="member-name">${esc(m.name)} ${m.is_owner?'<span class="group-role admin">DONO</span>':''}</div><div class="member-meta">${esc(m.email)}</div></div>${canAdmin&&!m.is_owner?`<div class="group-member-actions"><select onchange="changeGroupMemberRole('${m.id}',this.value)"><option value="viewer" ${m.role==='viewer'?'selected':''}>Visualizador</option><option value="editor" ${m.role==='editor'?'selected':''}>Editor</option><option value="admin" ${m.role==='admin'?'selected':''}>Admin</option></select>${String(m.id)!==String(currentUser?.id)?`<button class="btn-sm" style="color:#fca5a5" onclick="removeGroupMember('${m.id}')">Remover</button>`:''}</div>`:`<span class="group-role ${groupRoleClass(m.role)}">${groupRoleLabel(m.role)}</span>`}</div>`).join("");
+  if(canAdmin&&(d.invites||[]).length){html+=`<div class="group-section"><div class="group-section-title">Convites pendentes</div></div>`+(d.invites||[]).map(i=>`<div class="pending-invite"><div class="member-info"><div class="member-name">${esc(i.email)}</div><div class="member-meta">Aguardando cadastro/entrada · ${groupRoleLabel(i.role)}</div></div><button class="btn-sm" onclick="cancelGroupInvite('${i.id}')">Cancelar</button></div>`).join("");}
+  html+=`<div class="group-section"><div class="group-section-title">Últimas alterações</div></div>`;
+  html+=(d.activity||[]).length?(d.activity||[]).slice(0,15).map(a=>`<div class="activity-item">${activityText(a)}<div class="activity-time">${new Date(a.created_at).toLocaleString("pt-BR")}</div></div>`).join(""):'<div class="group-empty">Ainda não há atividades.</div>';
+  html+=`<div class="group-section" style="display:flex;gap:8px;flex-wrap:wrap">${g.is_owner?'<button class="btn btn-red" onclick="deleteGroup()">Excluir grupo</button>':'<button class="btn btn-dark" onclick="leaveGroup()">Sair do grupo</button>'}</div>`;
+  document.getElementById("groups-body").innerHTML=html;
+}
+async function renameGroup(){const d=groupView.detail,g=d?.group;if(!g)return;const name=prompt("Nome do grupo:",g.name);if(name===null||!name.trim())return;try{await apiFetch("/api/groups/"+g.id,{method:"PUT",body:JSON.stringify({name:name.trim(),description:g.description||""})});await loadGroups();await openGroup(g.id);toast("Grupo atualizado.");}catch(e){toast(e.message,1);}}
+async function inviteGroupMember(){const d=groupView.detail,g=d?.group;const email=document.getElementById("invite-email")?.value.trim();const role=document.getElementById("invite-role")?.value||"viewer";if(!email)return toast("Informe o e-mail.",1);try{const x=await apiFetch("/api/groups/"+g.id+"/invite",{method:"POST",body:JSON.stringify({email,role})});toast(x.pending?"Convite salvo. Ao criar/entrar na conta, o grupo aparecerá.":"Integrante adicionado ao grupo.");await openGroup(g.id);}catch(e){toast(e.message,1);}}
+async function changeGroupMemberRole(userId,role){const g=groupView.detail?.group;if(!g)return;try{await apiFetch(`/api/groups/${g.id}/members/${userId}`,{method:"PATCH",body:JSON.stringify({role})});await openGroup(g.id,true);toast("Permissão atualizada.");}catch(e){toast(e.message,1);}}
+async function removeGroupMember(userId){const g=groupView.detail?.group;if(!g||!confirm("Remover este integrante do grupo?"))return;try{await apiFetch(`/api/groups/${g.id}/members/${userId}`,{method:"DELETE"});await openGroup(g.id);toast("Integrante removido.");}catch(e){toast(e.message,1);}}
+async function cancelGroupInvite(id){const g=groupView.detail?.group;if(!g)return;try{await apiFetch(`/api/groups/${g.id}/invites/${id}`,{method:"DELETE"});await openGroup(g.id);toast("Convite cancelado.");}catch(e){toast(e.message,1);}}
+async function createRepertoire(){const g=groupView.detail?.group;const name=document.getElementById("new-folder-name")?.value.trim();if(!g||!name)return toast("Informe o nome da pasta.",1);try{await apiFetch(`/api/groups/${g.id}/repertoires`,{method:"POST",body:JSON.stringify({name})});await openGroup(g.id);toast("📁 Pasta criada.");}catch(e){toast(e.message,1);}}
+async function renameRepertoire(id){const r=(groupView.detail?.repertoires||[]).find(x=>x.id===id);if(!r)return;const name=prompt("Nome da pasta:",r.name);if(name===null||!name.trim())return;try{await apiFetch(`/api/repertoires/${id}`,{method:"PUT",body:JSON.stringify({name:name.trim(),description:r.description||""})});await openGroup(groupView.detail.group.id);toast("Pasta atualizada.");}catch(e){toast(e.message,1);}}
+async function deleteRepertoire(id){if(!confirm("Excluir esta pasta do grupo? As cifras pessoais não serão apagadas."))return;try{await apiFetch(`/api/repertoires/${id}`,{method:"DELETE"});await openGroup(groupView.detail.group.id);toast("Pasta excluída.");}catch(e){toast(e.message,1);}}
+async function leaveGroup(){const g=groupView.detail?.group;if(!g||!confirm("Sair deste grupo?"))return;try{await apiFetch(`/api/groups/${g.id}/leave`,{method:"POST"});await loadGroups();renderGroupList();toast("Você saiu do grupo.");}catch(e){toast(e.message,1);}}
+async function deleteGroup(){const g=groupView.detail?.group;if(!g||!confirm(`Excluir o grupo ${g.name}? As cifras pessoais dos integrantes não serão apagadas.`))return;try{await apiFetch(`/api/groups/${g.id}`,{method:"DELETE"});await loadGroups();renderGroupList();toast("Grupo excluído.");}catch(e){toast(e.message,1);}}
+async function openRepertoire(id,silent=false){
+  try{const data=await apiFetch(`/api/repertoires/${id}/cifras`);groupView={mode:"repertoire",repertoire:data.repertoire,sharedItems:data.items||[]};renderRepertoire();}catch(e){if(!silent)toast(e.message||"Erro ao abrir pasta.",1);}
+}
+function renderRepertoire(){
+  const r=groupView.repertoire,items=groupView.sharedItems||[];if(!r)return;setGroupHeader(`📁 ${r.name}`,true);
+  let html=`<div class="group-hero"><h3>📁 ${esc(r.name)}</h3><p>${esc(r.group_name)} · <span class="group-role ${groupRoleClass(r.role)}">${groupRoleLabel(r.role)}</span>${r.description?' · '+esc(r.description):''}</p></div>`;
+  if(r.can_write){const opts=library.map(x=>`<option value="${x.id}">${esc(x.title)}${x.tone?' · '+x.tone:''}</option>`).join("");html+=`<div class="group-section"><div class="group-section-title">Adicionar música</div><div class="group-invite-row"><select class="group-lib-select" id="group-library-select" style="flex:1"><option value="">Da minha biblioteca...</option>${opts}</select><button class="btn-sm" onclick="addLibraryCifraToRepertoire()">Adicionar</button><button class="btn btn-blue" style="padding:8px 12px" onclick="newSongForRepertoire()">+ Música nova</button></div></div>`;}
+  html+=items.length?items.map(x=>`<div class="shared-song"><div class="shared-info"><div class="shared-title">${esc(x.title)}</div><div class="shared-meta">${x.tone?'Tom base: '+esc(x.tone)+' · ':''}<span class="shared-owner">${esc(x.owner_name||x.owner_email||'Integrante')}</span>${x.singers?.length?`<div class="singer-line">🎤 ${x.singers.map(s=>esc(s.name)+(s.tone?' ('+esc(s.tone)+')':'')).join(' · ')}</div>`:''}</div></div><div class="shared-actions"><button class="btn-sm" onclick="openSharedSong('${x.id}')">${x.can_edit?'Abrir / Editar':'Abrir'}</button>${r.can_write?`<button class="btn-sm" style="color:#fca5a5" onclick="removeCifraFromRepertoire('${x.id}')">Remover</button>`:''}</div></div>`).join(""):'<div class="group-empty">Nenhuma música nesta pasta ainda.</div>';
+  document.getElementById("groups-body").innerHTML=html;
+}
+async function addLibraryCifraToRepertoire(){const id=document.getElementById("group-library-select")?.value;const r=groupView.repertoire;if(!id)return toast("Selecione uma música da sua biblioteca.",1);try{await apiFetch(`/api/repertoires/${r.id}/cifras`,{method:"POST",body:JSON.stringify({cifra_id:id})});await loadLib();await openRepertoire(r.id);toast("👥 Música compartilhada com o grupo.");}catch(e){toast(e.message,1);}}
+function newSongForRepertoire(){const r=groupView.repertoire;if(!r?.can_write)return;pendingShareRepertoireId=r.id;currentSharedContext=null;closeGroups();cifra="";st=0;currentCifraId=null;currentSingerTones=[];["raw-input","cifra-editor","song-title"].forEach(id=>document.getElementById(id).value="");setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();switchTab("editor");toast("Crie a música e clique em Salvar. Ela entrará nesta pasta compartilhada.");}
+async function removeCifraFromRepertoire(id){const r=groupView.repertoire;if(!r||!confirm("Remover esta música desta pasta? A cifra pessoal do autor será mantida."))return;try{await apiFetch(`/api/repertoires/${r.id}/cifras/${id}`,{method:"DELETE"});await loadLib();await openRepertoire(r.id);toast("Música removida da pasta.");}catch(e){toast(e.message,1);}}
+function openSharedSong(id){const r=groupView.repertoire,x=(groupView.sharedItems||[]).find(a=>a.id===id);if(!x||!r)return;currentCifraId=x.id;pendingShareRepertoireId=null;currentSharedContext={group_id:r.group_id,group_name:r.group_name,repertoire_id:r.id,repertoire_name:r.name,can_edit:!!x.can_edit,is_owner:!!x.is_owner};document.getElementById("song-title").value=x.title;cifra=x.text;st=0;currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));document.getElementById("raw-input").value=x.text;document.getElementById("cifra-editor").value=x.text;setCurrentEditAccess(!!x.can_edit);renderSingerAssignments();renderShareContextBanner();closeGroups();switchTab("preview");toast(x.can_edit?"Música compartilhada aberta para edição.":"Música compartilhada aberta em modo visualização.");}
+function groupBack(){if(groupView.mode==="repertoire"&&groupView.repertoire?.group_id){openGroup(groupView.repertoire.group_id);return;}if(groupView.mode==="group"){loadGroups().then(renderGroupList);return;}renderGroupList();}
+async function refreshGroupView(silent=false){if(groupView.mode==="repertoire"&&groupView.repertoire?.id)return openRepertoire(groupView.repertoire.id,silent);if(groupView.mode==="group"&&groupView.detail?.group?.id)return openGroup(groupView.detail.group.id,silent);await loadGroups();renderGroupList();}
 
 // ══════════════════════════════════════════════════════
 // ADMINISTRACAO
@@ -1063,18 +1220,32 @@ async function saveCifra(){
   const text=txText(cifra,st);
   if(!text.trim()){toast("Nada para salvar!",1);return;}
   if(!currentUser){toast("Entre na sua conta para salvar na nuvem.",1);return;}
+  if(isCurrentReadOnly()){toast("Você tem acesso somente para visualizar esta música.",1);return;}
   const title=document.getElementById("song-title").value.trim()||"Sem título";
   const k=detectKey(cifra);
   const tone=k?TONES[((NMAP[k]+st)%12+12)%12]:null;
   try{
     const singer_tones=currentSingerTones.map(x=>({singer_id:x.singer_id,tone:x.tone||null}));
+    const payload={title,tone,text,singer_tones};
+    if(currentSharedContext?.group_id)payload.group_id=currentSharedContext.group_id;
+    if(currentSharedContext?.repertoire_id)payload.repertoire_id=currentSharedContext.repertoire_id;
     const data=currentCifraId
-      ?await apiFetch("/api/cifras/"+encodeURIComponent(currentCifraId),{method:"PUT",body:JSON.stringify({title,tone,text,singer_tones})})
-      :await apiFetch("/api/cifras",{method:"POST",body:JSON.stringify({title,tone,text,singer_tones})});
+      ?await apiFetch("/api/cifras/"+encodeURIComponent(currentCifraId),{method:"PUT",body:JSON.stringify(payload)})
+      :await apiFetch("/api/cifras",{method:"POST",body:JSON.stringify(payload)});
     const x=data.item;currentCifraId=x.id;
-    currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,tone:s.tone||""}));renderSingerAssignments();
-    const item={id:x.id,title:x.title,tone:x.tone,text:x.text,singers:Array.isArray(x.singers)?x.singers:[],date:x.updated_at||x.created_at};
-    library=library.filter(i=>i.id!==x.id);library.unshift(item);updateCount();toast("☁️ Salvo na nuvem!");
+    currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));renderSingerAssignments();
+    const item={id:x.id,title:x.title,tone:x.tone,text:x.text,singers:Array.isArray(x.singers)?x.singers:[],shared_count:Number(x.shared_count||0),date:x.updated_at||x.created_at};
+    if(x.owner_user_id&&String(x.owner_user_id)!==String(currentUser.id)){
+      // cifra de outro integrante: fica no grupo, não entra na biblioteca pessoal
+    }else{library=library.filter(i=>i.id!==x.id);library.unshift(item);updateCount();}
+
+    if(pendingShareRepertoireId){
+      const repId=pendingShareRepertoireId;
+      await apiFetch(`/api/repertoires/${repId}/cifras`,{method:"POST",body:JSON.stringify({cifra_id:x.id})});
+      pendingShareRepertoireId=null;await loadLib();renderShareContextBanner();toast("☁️ Salvo e compartilhado com o grupo!");
+    }else{
+      await loadLib();toast(currentSharedContext?"👥 Alteração salva para todos do grupo!":"☁️ Salvo na nuvem!");
+    }
   }catch(e){toast("Erro ao salvar: "+e.message,1);}
 }
 
@@ -1088,7 +1259,7 @@ function renderLib(){
     <div class="lib-item">
       <div class="lib-info">
         <div class="lib-title">${esc(x.title)}</div>
-        <div class="lib-meta">${x.tone?"Tom base: "+x.tone+" · ":""}${new Date(x.date).toLocaleDateString("pt-BR")}${x.singers?.length?"<br>🎤 "+x.singers.map(s=>esc(s.name)+(s.tone?" ("+esc(s.tone)+")":"")).join(" · "):""}</div>
+        <div class="lib-meta">${x.tone?"Tom base: "+x.tone+" · ":""}${new Date(x.date).toLocaleDateString("pt-BR")}${x.shared_count?" · 👥 compartilhada em "+x.shared_count+" pasta(s)":""}${x.singers?.length?"<br>🎤 "+x.singers.map(s=>esc(s.name)+(s.tone?" ("+esc(s.tone)+")":"")).join(" · "):""}</div>
       </div>
       <button style="background:var(--gold);color:#0d0d0f;border:none;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px" onclick="loadItem('${x.id}')">Abrir</button>
       <button style="background:#3a1a1a;color:#f87171;border:1px solid #5a2a2a;border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer" onclick="delItem('${x.id}')">🗑</button>
@@ -1098,11 +1269,11 @@ function renderLib(){
 function loadItem(id){
   const x=library.find(i=>i.id===id);if(!x)return;
   document.getElementById("song-title").value=x.title;
-  currentCifraId=x.id;cifra=x.text;st=0;
-  currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,tone:s.tone||""}));
+  currentCifraId=x.id;currentSharedContext=null;pendingShareRepertoireId=null;cifra=x.text;st=0;
+  currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));
   document.getElementById("raw-input").value=x.text;
   document.getElementById("cifra-editor").value=x.text;
-  renderSingerAssignments();closeLibrary();switchTab("preview");
+  setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();closeLibrary();switchTab("preview");
   toast("Cifra carregada!");
 }
 async function delItem(id){
@@ -1281,9 +1452,9 @@ function presFontSize(d){pfz=Math.min(48,Math.max(8,pfz+d));document.getElementB
 // NEW CIFRA
 // ══════════════════════════════════════════════════════
 function newCifra(){
-  cifra="";st=0;currentCifraId=null;currentSingerTones=[];
+  cifra="";st=0;currentCifraId=null;currentSingerTones=[];currentSharedContext=null;pendingShareRepertoireId=null;
   ["raw-input","cifra-editor","song-title"].forEach(id=>document.getElementById(id).value="");
-  renderSingerAssignments();
+  setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();
   switchTab("editor");
 }
 
@@ -1305,7 +1476,7 @@ function toast(msg,err=0){
 updateDot();
 document.getElementById("cifra-editor").style.fontSize=edFs+"px";
 initApp();
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closePresentation();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePresentation();closeGroups();}});
 </script>
 
 <script>

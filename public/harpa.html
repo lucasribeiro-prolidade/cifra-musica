@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111013">
+<title>Harpa Cristã - Cifra-Musica</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#111013;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+:root{--bg:#111013;--card:#1c1917;--card2:#161518;--border:#302c28;--gold:#f5c842;--muted:#9a948c;--blue:#7dd3fc}
+.top{position:sticky;top:0;z-index:20;background:rgba(17,16,19,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 12px}
+.topin{max-width:920px;margin:auto;display:flex;align-items:center;gap:10px}.back{border:1px solid var(--border);background:#24211e;color:#eee;border-radius:10px;padding:9px 12px;text-decoration:none;font-weight:700}.brand{flex:1;min-width:0}.brand b{display:block;color:var(--gold);font-size:17px}.brand span{font-size:11px;color:var(--muted)}
+.wrap{max-width:920px;margin:auto;padding:14px}.hero{background:linear-gradient(145deg,#211d18,#17161a);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}.hero h1{font-size:23px;margin:0 0 5px;color:var(--gold)}.hero p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.quick{display:flex;gap:8px;margin:12px 0}.quick input{flex:1;min-width:0;background:#171619;border:1px solid var(--border);color:#fff;border-radius:10px;padding:11px 12px;font-size:16px}.quick button{border:0;border-radius:10px;background:var(--gold);color:#111;font-weight:800;padding:11px 15px}.msg{display:none;background:#162235;color:#bfe6ff;border:1px solid #29415d;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}.msg.on{display:block}
+.parts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.part{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:12px;color:#eee;text-align:left;cursor:pointer}.part.active{border-color:#8c6d11;background:#2a230d}.part strong{display:block;color:var(--gold);font-size:14px}.part small{display:block;color:var(--muted);margin-top:4px}.viewer{border:1px solid var(--border);border-radius:14px;background:var(--card);overflow:hidden}.viewerbar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--card2);border-bottom:1px solid var(--border)}.viewerbar .vtitle{flex:1;font-weight:800;color:#ddd}.viewerbar a{border:1px solid var(--border);background:#25221f;color:#eee;border-radius:9px;padding:8px 10px;text-decoration:none;font-size:12px;font-weight:700}.pdf{width:100%;height:calc(100vh - 280px);min-height:520px;border:0;background:#222}.note{font-size:11px;color:#777;line-height:1.5;margin:12px 2px 20px}
+@media(max-width:700px){.parts{grid-template-columns:1fr 1fr}.wrap{padding:10px}.hero{padding:14px}.hero h1{font-size:20px}.pdf{height:calc(100vh - 300px);min-height:500px}.topin{gap:7px}.back{padding:8px 10px}.brand span{display:none}}
+@media(max-width:380px){.parts{grid-template-columns:1fr}.pdf{height:70vh}}
+</style>
+</head>
+<body>
+<div class="top"><div class="topin"><a class="back" href="/">← Início</a><div class="brand"><b>📖 Harpa Cristã</b><span>Cifra-Musica</span></div></div></div>
+<main class="wrap">
+  <section class="hero"><h1>Harpa Cristã Cifrada</h1><p>Acesso direto à edição cifrada que você adicionou ao sistema. Não usa IA para abrir: os arquivos já ficam disponíveis no Cifra-Musica.</p>
+    <div class="quick"><input id="hino" inputmode="numeric" pattern="[0-9]*" placeholder="Número do hino (1 a 640)"><button onclick="irHino()">Ir</button></div><div class="msg" id="msg"></div>
+  </section>
+  <section class="parts">
+    <button class="part active" data-i="0" onclick="setPart(0)"><strong>Parte 1</strong><small>Hinos 1 a 168</small></button>
+    <button class="part" data-i="1" onclick="setPart(1)"><strong>Parte 2</strong><small>Hinos 169 a 346</small></button>
+    <button class="part" data-i="2" onclick="setPart(2)"><strong>Parte 3</strong><small>Hinos 347 a 524</small></button>
+    <button class="part" data-i="3" onclick="setPart(3)"><strong>Parte 4</strong><small>Hinos 525 a 640</small></button>
+  </section>
+  <section class="viewer"><div class="viewerbar"><div class="vtitle" id="vtitle">Parte 1 · Hinos 1-168</div><a id="full" href="/harpa/parte1.pdf" target="_blank" rel="noopener">Tela cheia ↗</a></div><iframe class="pdf" id="pdf" src="/harpa/parte1.pdf#view=FitH"></iframe></section>
+  <div class="note">Observação: esta tela usa os PDFs enviados por você. Em alguns celulares o navegador pode abrir o PDF em uma nova tela; nesse caso use “Tela cheia”. Para disponibilizar esta edição a terceiros em um produto comercial, verifique a autorização/licença da editora.</div>
+</main>
+<script>
+const parts=[
+ {start:1,end:168,file:'/harpa/parte1.pdf',name:'Parte 1'},
+ {start:169,end:346,file:'/harpa/parte2.pdf',name:'Parte 2'},
+ {start:347,end:524,file:'/harpa/parte3.pdf',name:'Parte 3'},
+ {start:525,end:640,file:'/harpa/parte4.pdf',name:'Parte 4'}
+];
+let current=0;
+function setPart(i){current=i;const p=parts[i];document.querySelectorAll('.part').forEach((b,j)=>b.classList.toggle('active',j===i));document.getElementById('vtitle').textContent=`${p.name} · Hinos ${p.start}-${p.end}`;document.getElementById('pdf').src=p.file+'#view=FitH';document.getElementById('full').href=p.file;window.scrollTo({top:190,behavior:'smooth'});}
+function irHino(){const n=Number(document.getElementById('hino').value);const msg=document.getElementById('msg');if(!Number.isInteger(n)||n<1||n>640){msg.textContent='Digite um número de 1 a 640.';msg.classList.add('on');return;}const i=parts.findIndex(p=>n>=p.start&&n<=p.end);setPart(i);msg.textContent=`Hino ${n}: abra a ${parts[i].name} (faixa ${parts[i].start}-${parts[i].end}).`;msg.classList.add('on');}
+document.getElementById('hino').addEventListener('keydown',e=>{if(e.key==='Enter')irHino()});
+</script>
+</body>
+</html>

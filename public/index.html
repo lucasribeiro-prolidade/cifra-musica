@@ -360,6 +360,7 @@ body:not(.auth-pending) .auth-screen{display:none}
     <div class="home-grid">
       <button class="home-card" onclick="newCifra()"><span class="home-card-icon">➕</span><span><span class="home-card-title">Nova cifra</span><br><span class="home-card-sub">Colar, importar ou criar uma nova música.</span></span></button>
       <button class="home-card" onclick="openLibrary()"><span class="home-card-icon">📚</span><span><span class="home-card-title">Minha biblioteca</span><br><span class="home-card-sub"><strong id="home-lib-count">0</strong> cifra(s) salvas na nuvem.</span></span></button>
+      <button class="home-card" onclick="openHarpa()"><span class="home-card-icon">📖</span><span><span class="home-card-title">Harpa Cristã</span><br><span class="home-card-sub">Harpa Cristã Cifrada completa, hinos 1 a 640.</span></span></button>
       <button class="home-card" onclick="openGroups()"><span class="home-card-icon">👥</span><span><span class="home-card-title">Grupos</span><br><span class="home-card-sub">Pastas e repertórios compartilhados.</span></span></button>
       <button class="home-card" onclick="openSingers()"><span class="home-card-icon">🎤</span><span><span class="home-card-title">Cantores</span><br><span class="home-card-sub">Cadastre cantores e seus tons.</span></span></button>
       <button class="home-card" onclick="switchTab('search')"><span class="home-card-icon">🔍</span><span><span class="home-card-title">Buscar música</span><br><span class="home-card-sub">Use a IA para localizar e organizar uma cifra.</span></span></button>
@@ -1079,6 +1080,7 @@ function updateHomeCurrent(){
   box.classList.toggle("on",has);
   if(has){const t=document.getElementById("song-title")?.value?.trim()||"Cifra atual";document.getElementById("home-current-title").textContent=t;}
 }
+function openHarpa(){window.location.href="/harpa.html";}
 function goHome(){
   ["library-overlay","singers-overlay","groups-overlay","admin-overlay"].forEach(id=>document.getElementById(id)?.classList.remove("open"));
   setManualEditor(false);

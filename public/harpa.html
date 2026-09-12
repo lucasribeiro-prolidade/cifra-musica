@@ -45,10 +45,10 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 </style>
 </head>
 <body>
-<div class="top"><div class="topin"><a class="back" href="/">← Início</a><div class="brand"><b>📖 Harpa Cristã</b><span>Teste de alinhamento musical</span></div><button id="top-list" class="btn btn-dark btn-sm hidden" onclick="showList()">Lista</button></div></div>
+<div class="top"><div class="topin"><a class="back" href="/">← Início</a><div class="brand"><b>📖 Harpa Cristã</b><span>640 hinos cifrados</span></div><button id="top-list" class="btn btn-dark btn-sm hidden" onclick="showList()">Lista</button></div></div>
 <main class="wrap">
 <section id="list-screen">
-  <div class="hero"><h1>Harpa Cristã Cifrada</h1><p>Teste dos 3 primeiros hinos com cada acorde posicionado exatamente sobre o trecho em que entra na melodia.</p><span class="testbadge">TESTE · HINOS 1, 2 E 3</span><div class="search"><input id="search" placeholder="Número ou nome..."><button class="btn btn-gold" onclick="runSearch()">Buscar</button></div></div>
+  <div class="hero"><h1>Harpa Cristã Cifrada</h1><p>640 hinos cifrados com cada acorde posicionado exatamente sobre o trecho em que entra na melodia.</p><span class="testbadge">640 HINOS · CIFRADOS</span><div class="search"><input id="search" placeholder="Número ou nome..."><button class="btn btn-gold" onclick="runSearch()">Buscar</button></div></div>
   <div id="list" class="list"><div style="padding:30px;text-align:center;color:#999">Carregando...</div></div>
 </section>
 <section id="detail-screen" class="hidden">
@@ -75,7 +75,7 @@ function currentTone(){if(!current?.tone)return null;const i=NMAP[current.tone];
 function toneOptions(){document.getElementById('tone-select').innerHTML='<option value="">Mudar...</option>'+TONES.map(t=>`<option value="${t}">${t}</option>`).join('')}
 function renderList(items=DATA){const box=document.getElementById('list');box.innerHTML=items.map(x=>`<button class="hino-row" onclick="openHino(${x.number})"><span class="num">${x.number}</span><span class="rinfo"><span class="rtitle">${esc(x.title)}</span><span class="rmeta">Tom original: ${esc(x.tone_label)}</span></span><span>›</span></button>`).join('')||'<div class="panel">Nenhum hino encontrado.</div>'}
 function runSearch(){const q=document.getElementById('search').value.trim();if(!q)return renderList(DATA);const n=Number(q),nq=norm(q);renderList(DATA.filter(x=>(Number.isInteger(n)&&x.number===n)||norm(x.title).includes(nq)))}
-async function load(){try{const r=await fetch('/data/harpa.json?teste=53',{cache:'no-store'});if(!r.ok)throw new Error('harpa.json não encontrado');const d=await r.json();DATA=d.items||[];renderList()}catch(e){document.getElementById('list').innerHTML=`<div class="panel">${esc(e.message)}</div>`}}
+async function load(){try{const r=await fetch('/data/harpa.json?v=55',{cache:'no-store'});if(!r.ok)throw new Error('harpa.json não encontrado');const d=await r.json();DATA=d.items||[];renderList()}catch(e){document.getElementById('list').innerHTML=`<div class="panel">${esc(e.message)}</div>`}}
 function openHino(n){current=DATA.find(x=>x.number===n);if(!current)return;steps=0;fontSize=window.innerWidth<=520?12:15;document.getElementById('list-screen').classList.add('hidden');document.getElementById('detail-screen').classList.remove('hidden');document.getElementById('top-list').classList.remove('hidden');document.getElementById('detail-num').textContent='Hino '+current.number;document.getElementById('detail-name').textContent=current.title;document.getElementById('detail-original').textContent='Tom original: '+current.tone_label;refresh();window.scrollTo(0,0)}
 function showList(){closePresentation();document.getElementById('detail-screen').classList.add('hidden');document.getElementById('list-screen').classList.remove('hidden');document.getElementById('top-list').classList.add('hidden');window.scrollTo(0,0)}
 function lineHTML(line){if(line.break)return '<div class="musicline break"></div>';const chords=(line.chords||[]).map(c=>`<span class="chordmark" style="left:${c.pos}ch">${esc(txChord(c.chord,steps))}</span>`).join('');return `<div class="musicline"><div class="chordrow">${chords}</div><div class="lyricrow${line.em?' em':''}">${esc(line.text)}</div></div>`}

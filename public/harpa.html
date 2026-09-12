@@ -42,6 +42,52 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 .pres-controls button{border:0;border-radius:8px;padding:9px 11px;background:#25252b;color:#ddd;font-weight:800;font-size:12px}.pres-controls .play{background:var(--gold);color:#111}.pres-controls .stop{background:#8f1d1d;color:#fff}
 .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,80px);opacity:0;z-index:9999;background:#1d3820;color:#9cf3a8;border:1px solid #315d35;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:800;max-width:90vw;text-align:center;transition:.25s}.toast.on{transform:translate(-50%,0);opacity:1}.toast.err{background:#3a1a1a;color:#fca5a5}
 @media(max-width:520px){.wrap{padding:10px 9px 88px}.brand span{display:none}.topin{height:54px}.detail-title h1{font-size:19px}.cifra-card{padding:10px}.hero{padding:13px}}
+
+/* v5.6 — leitura mais confortável no modo Apresentar */
+#presentation .pres-body{
+  padding:18px 14px 120px;
+}
+#presentation .cifra{
+  line-height:1.5;
+}
+#presentation .musicline{
+  min-height:3.55em;
+  margin:.34em 0;
+}
+#presentation .chordrow{
+  height:1.38em;
+  line-height:1.15;
+  margin-bottom:.22em;
+}
+#presentation .lyricrow{
+  line-height:1.55;
+}
+#presentation .musicline.break{
+  height:1.35em;
+  min-height:1.35em;
+  margin:.2em 0;
+}
+@media(max-width:520px){
+  #presentation .pres-body{
+    padding:16px 12px 112px;
+  }
+  #presentation .musicline{
+    min-height:3.7em;
+    margin:.38em 0;
+  }
+  #presentation .chordrow{
+    height:1.42em;
+    margin-bottom:.24em;
+  }
+  #presentation .lyricrow{
+    line-height:1.58;
+  }
+  #presentation .musicline.break{
+    height:1.45em;
+    min-height:1.45em;
+  }
+}
+
 </style>
 </head>
 <body>

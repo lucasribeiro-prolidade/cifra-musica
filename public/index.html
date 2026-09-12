@@ -635,6 +635,157 @@ main{max-width:760px}
   .mobile-nav-card{min-height:88px;padding:12px}
 }
 
+
+/* v5.9 — Ajuda / Como usar */
+.help-overlay{
+  position:fixed;
+  inset:0;
+  z-index:8700;
+  background:rgba(8,7,7,.72);
+  backdrop-filter:blur(5px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.help-overlay.open{opacity:1;pointer-events:auto}
+.help-panel{
+  width:100%;
+  max-width:680px;
+  max-height:88vh;
+  overflow:hidden;
+  background:linear-gradient(180deg,#27221e,#1a1816);
+  border:1px solid #443a31;
+  border-radius:22px;
+  box-shadow:0 28px 80px rgba(0,0,0,.42);
+  display:flex;
+  flex-direction:column;
+  transform:translateY(12px);
+  transition:transform .2s ease;
+}
+.help-overlay.open .help-panel{transform:translateY(0)}
+.help-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:17px 18px 14px;
+  border-bottom:1px solid #3a322b;
+  background:linear-gradient(180deg,#2d2722,#241f1b);
+}
+.help-head-icon{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#453415;
+  border:1px solid #6b501c;
+  font-size:24px;
+  flex:0 0 auto;
+}
+.help-head-text{flex:1;min-width:0}
+.help-head-text h2{
+  margin:0;
+  color:#f5cb5c;
+  font-family:var(--serif);
+  font-size:21px;
+}
+.help-head-text p{
+  color:#aa9e8d;
+  font-size:11.5px;
+  margin-top:3px;
+}
+.help-close{
+  width:40px;height:40px;border-radius:12px;
+  border:1px solid #443c35;background:#2c2824;color:#ddd;
+  font-size:20px;
+}
+.help-body{
+  overflow-y:auto;
+  padding:15px;
+  -webkit-overflow-scrolling:touch;
+}
+.help-intro{
+  background:linear-gradient(145deg,#342a1d,#221e19);
+  border:1px solid #4b3d2c;
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:12px;
+}
+.help-intro strong{display:block;color:#f3eadb;font-size:14px;margin-bottom:4px}
+.help-intro span{color:#aa9e8d;font-size:12px;line-height:1.5}
+.help-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.help-step{
+  background:#211e1b;
+  border:1px solid #39322c;
+  border-radius:15px;
+  padding:13px;
+}
+.help-step-top{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-bottom:7px;
+}
+.help-step-icon{
+  width:34px;height:34px;border-radius:11px;
+  background:#302920;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;flex:0 0 auto;
+}
+.help-step h3{
+  margin:0;color:#efe5d5;font-size:13.5px;
+}
+.help-step p{
+  margin:0;color:#a99d8c;font-size:11.5px;line-height:1.5;
+}
+.help-tip{
+  margin-top:12px;
+  border:1px solid #364960;
+  background:#1b2735;
+  color:#b9d6f2;
+  border-radius:14px;
+  padding:12px 13px;
+  font-size:11.5px;
+  line-height:1.5;
+}
+.help-footer{
+  padding:11px 15px 14px;
+  border-top:1px solid #352f29;
+  background:#1b1917;
+}
+.help-footer .btn{width:100%}
+.help-header-btn{color:#f5cb5c;border-color:#5d481b;background:#2d2412}
+.mobile-nav-card.help{
+  border-color:#4d4429;
+  background:linear-gradient(180deg,#302a1c,#241f18);
+}
+
+@media(max-width:620px){
+  .help-overlay{
+    padding:0;
+    align-items:flex-end;
+  }
+  .help-panel{
+    max-height:92vh;
+    border-radius:24px 24px 0 0;
+    border-bottom:0;
+  }
+  .help-head{padding:14px 14px 12px}
+  .help-body{padding:12px}
+  .help-grid{grid-template-columns:1fr}
+  .help-step{padding:12px}
+  .help-intro{padding:12px}
+}
+
 </style>
 </head>
 <body class="auth-pending">
@@ -736,10 +887,96 @@ main{max-width:760px}
         <span><strong>Biblioteca</strong><small>Suas cifras salvas na nuvem.</small></span>
       </button>
 
+      <button class="mobile-nav-card help" onclick="closeMobileNav();openHelp()">
+        <span class="mi">❓</span>
+        <span><strong>Ajuda</strong><small>Aprenda rapidamente como usar o sistema.</small></span>
+      </button>
+
       <button class="mobile-nav-card danger" onclick="closeMobileNav();logoutUser()">
         <span class="mi">🚪</span>
         <span><strong>Sair</strong><small>Encerrar esta sessão.</small></span>
       </button>
+    </div>
+  </div>
+</div>
+
+
+<div class="help-overlay" id="help-overlay" onclick="closeHelp()">
+  <div class="help-panel" onclick="event.stopPropagation()">
+    <div class="help-head">
+      <div class="help-head-icon">❓</div>
+      <div class="help-head-text">
+        <h2>Como usar o Cifra-Musica</h2>
+        <p>Guia rápido para começar a tocar e organizar seu repertório.</p>
+      </div>
+      <button class="help-close" onclick="closeHelp()" aria-label="Fechar">×</button>
+    </div>
+
+    <div class="help-body">
+      <div class="help-intro">
+        <strong>Começando agora?</strong>
+        <span>Na tela inicial escolha o que deseja fazer. Você pode criar uma cifra, abrir sua biblioteca, usar a Harpa Cristã, trabalhar em grupo ou cadastrar cantores.</span>
+      </div>
+
+      <div class="help-grid">
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">➕</div><h3>1. Nova cifra</h3></div>
+          <p>Toque em <b>Nova cifra</b>. Cole uma cifra, importe um arquivo ou escreva manualmente. Depois visualize e salve na biblioteca.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">🔍</div><h3>2. Buscar música</h3></div>
+          <p>Use <b>Buscar música</b> para localizar e organizar uma cifra com ajuda da IA. Depois confira o resultado antes de salvar.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">📚</div><h3>3. Minha biblioteca</h3></div>
+          <p>Aqui ficam suas cifras salvas na nuvem. Abra uma música para tocar, editar, mudar o tom ou apresentar.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">📖</div><h3>4. Harpa Cristã</h3></div>
+          <p>Pesquise pelo número ou nome do hino. Você pode mudar o tom, apresentar e salvar uma cópia na sua biblioteca.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">🎤</div><h3>5. Cantores e tons</h3></div>
+          <p>Cadastre os cantores e vincule o tom em que cada pessoa canta determinada música. Isso facilita muito na hora do repertório.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">👥</div><h3>6. Grupos</h3></div>
+          <p>Crie um grupo, adicione integrantes e compartilhe pastas/repertórios. As alterações ficam disponíveis para os integrantes autorizados.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">🎼</div><h3>7. Mudar o tom</h3></div>
+          <p>Use <b>−½</b> e <b>+½</b> para transpor a cifra. Você também pode escolher diretamente o tom desejado e voltar ao tom original.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">▶️</div><h3>8. Apresentar</h3></div>
+          <p>O modo <b>Apresentar</b> deixa a cifra limpa para tocar. Ajuste o tamanho da letra e use a rolagem automática na velocidade desejada.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">🏠</div><h3>9. Voltar ao início</h3></div>
+          <p>No celular, use o botão <b>Início</b> no topo. O botão <b>Menu</b> reúne Biblioteca, Grupos, Cantores, IA, Ajuda e Sair.</p>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-top"><div class="help-step-icon">👑</div><h3>10. Administrador</h3></div>
+          <p>O administrador pode gerenciar usuários e acessos. Essa opção aparece somente para contas com permissão de Admin.</p>
+        </div>
+      </div>
+
+      <div class="help-tip">
+        💡 <strong>Dica:</strong> antes de tocar, abra a música, confirme o cantor e o tom, depois use <b>Apresentar</b>. Assim a tela fica preparada somente para a execução.
+      </div>
+    </div>
+
+    <div class="help-footer">
+      <button class="btn btn-gold" onclick="closeHelp()">Entendi, vamos tocar 🎵</button>
     </div>
   </div>
 </div>
@@ -758,6 +995,7 @@ main{max-width:760px}
       <button class="home-card" onclick="openSingers()"><span class="home-card-icon">🎤</span><span><span class="home-card-title">Cantores</span><br><span class="home-card-sub">Cadastre cantores e seus tons.</span></span></button>
       <button class="home-card" onclick="switchTab('search')"><span class="home-card-icon">🔍</span><span><span class="home-card-title">Buscar música</span><br><span class="home-card-sub">Use a IA para localizar e organizar uma cifra.</span></span></button>
       <button class="home-card" onclick="switchTab('editor')"><span class="home-card-icon">✏️</span><span><span class="home-card-title">Colar / editar</span><br><span class="home-card-sub">Abra diretamente a área de edição.</span></span></button>
+      <button class="home-card" onclick="openHelp()"><span class="home-card-icon">❓</span><span><span class="home-card-title">Ajuda / Como usar</span><br><span class="home-card-sub">Veja um guia rápido para usar o Cifra-Musica.</span></span></button>
     </div>
     <div class="home-current" id="home-current">
       <div class="home-current-info"><div class="home-current-title" id="home-current-title">Música atual</div><div class="home-current-sub">Continue a cifra que estava aberta.</div></div>
@@ -1464,6 +1702,27 @@ async function adminSetActive(id,isActive){
 }
 
 
+
+// ══════════════════════════════════════════════════════
+// AJUDA / COMO USAR
+// ══════════════════════════════════════════════════════
+function openHelp(){
+  closeMobileNav();
+  const el=document.getElementById("help-overlay");
+  if(el)el.classList.add("open");
+  document.body.style.overflow="hidden";
+}
+function closeHelp(){
+  const el=document.getElementById("help-overlay");
+  if(el)el.classList.remove("open");
+  if(!document.querySelector(".drawer-overlay.open") && !document.getElementById("presentation")?.classList.contains("on")){
+    document.body.style.overflow="";
+  }
+}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape")closeHelp();
+});
+
 // ══════════════════════════════════════════════════════
 // MENU MOBILE
 // ══════════════════════════════════════════════════════
@@ -1497,6 +1756,7 @@ function updateHomeCurrent(){
 function openHarpa(){window.location.href="/harpa.html";}
 function goHome(){
   closeMobileNav();
+  closeHelp();
   ["library-overlay","singers-overlay","groups-overlay","admin-overlay"].forEach(id=>document.getElementById(id)?.classList.remove("open"));
   setManualEditor(false);
   const home=document.getElementById("home-screen"),work=document.getElementById("workspace");
@@ -2221,6 +2481,157 @@ main{max-width:760px}
   .mobile-head-btn{padding:8px 9px}
   .mobile-head-btn .mh-label{display:none}
   .mobile-nav-card{min-height:88px;padding:12px}
+}
+
+
+/* v5.9 — Ajuda / Como usar */
+.help-overlay{
+  position:fixed;
+  inset:0;
+  z-index:8700;
+  background:rgba(8,7,7,.72);
+  backdrop-filter:blur(5px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.help-overlay.open{opacity:1;pointer-events:auto}
+.help-panel{
+  width:100%;
+  max-width:680px;
+  max-height:88vh;
+  overflow:hidden;
+  background:linear-gradient(180deg,#27221e,#1a1816);
+  border:1px solid #443a31;
+  border-radius:22px;
+  box-shadow:0 28px 80px rgba(0,0,0,.42);
+  display:flex;
+  flex-direction:column;
+  transform:translateY(12px);
+  transition:transform .2s ease;
+}
+.help-overlay.open .help-panel{transform:translateY(0)}
+.help-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:17px 18px 14px;
+  border-bottom:1px solid #3a322b;
+  background:linear-gradient(180deg,#2d2722,#241f1b);
+}
+.help-head-icon{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#453415;
+  border:1px solid #6b501c;
+  font-size:24px;
+  flex:0 0 auto;
+}
+.help-head-text{flex:1;min-width:0}
+.help-head-text h2{
+  margin:0;
+  color:#f5cb5c;
+  font-family:var(--serif);
+  font-size:21px;
+}
+.help-head-text p{
+  color:#aa9e8d;
+  font-size:11.5px;
+  margin-top:3px;
+}
+.help-close{
+  width:40px;height:40px;border-radius:12px;
+  border:1px solid #443c35;background:#2c2824;color:#ddd;
+  font-size:20px;
+}
+.help-body{
+  overflow-y:auto;
+  padding:15px;
+  -webkit-overflow-scrolling:touch;
+}
+.help-intro{
+  background:linear-gradient(145deg,#342a1d,#221e19);
+  border:1px solid #4b3d2c;
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:12px;
+}
+.help-intro strong{display:block;color:#f3eadb;font-size:14px;margin-bottom:4px}
+.help-intro span{color:#aa9e8d;font-size:12px;line-height:1.5}
+.help-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.help-step{
+  background:#211e1b;
+  border:1px solid #39322c;
+  border-radius:15px;
+  padding:13px;
+}
+.help-step-top{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-bottom:7px;
+}
+.help-step-icon{
+  width:34px;height:34px;border-radius:11px;
+  background:#302920;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;flex:0 0 auto;
+}
+.help-step h3{
+  margin:0;color:#efe5d5;font-size:13.5px;
+}
+.help-step p{
+  margin:0;color:#a99d8c;font-size:11.5px;line-height:1.5;
+}
+.help-tip{
+  margin-top:12px;
+  border:1px solid #364960;
+  background:#1b2735;
+  color:#b9d6f2;
+  border-radius:14px;
+  padding:12px 13px;
+  font-size:11.5px;
+  line-height:1.5;
+}
+.help-footer{
+  padding:11px 15px 14px;
+  border-top:1px solid #352f29;
+  background:#1b1917;
+}
+.help-footer .btn{width:100%}
+.help-header-btn{color:#f5cb5c;border-color:#5d481b;background:#2d2412}
+.mobile-nav-card.help{
+  border-color:#4d4429;
+  background:linear-gradient(180deg,#302a1c,#241f18);
+}
+
+@media(max-width:620px){
+  .help-overlay{
+    padding:0;
+    align-items:flex-end;
+  }
+  .help-panel{
+    max-height:92vh;
+    border-radius:24px 24px 0 0;
+    border-bottom:0;
+  }
+  .help-head{padding:14px 14px 12px}
+  .help-body{padding:12px}
+  .help-grid{grid-template-columns:1fr}
+  .help-step{padding:12px}
+  .help-intro{padding:12px}
 }
 
 </style></head>

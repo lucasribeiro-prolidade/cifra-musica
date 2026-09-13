@@ -88,6 +88,118 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
   }
 }
 
+
+/* v5.10 — apresentação musical: fundo confortável + frases curtas */
+#presentation{
+  background:#29241f;
+}
+#presentation .pres-top{
+  background:linear-gradient(180deg,#373029,#2d2823);
+  border-bottom:1px solid #4a4037;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);
+}
+#presentation .pres-body{
+  background:
+    radial-gradient(circle at top,rgba(245,200,66,.07),transparent 30%),
+    linear-gradient(180deg,#2b2621 0%,#231f1c 100%);
+  padding:20px 16px 122px;
+  overflow-x:hidden;
+}
+#presentation .pres-controls{
+  background:linear-gradient(180deg,#312b26,#29241f);
+  border-top:1px solid #493f36;
+}
+#presentation .pres-title{
+  color:#f5cf69;
+}
+#presentation .lyricrow{
+  color:#fff8ec;
+  letter-spacing:.01em;
+}
+#presentation .chordrow{
+  color:#ff7b70;
+}
+#presentation .musicline{
+  width:max-content;
+  max-width:100%;
+}
+#presentation .cifra{
+  min-width:0;
+  width:100%;
+  max-width:100%;
+}
+.pres-theme-btn{
+  border:1px solid #51463b!important;
+  background:#3b342d!important;
+  color:#f7e9cf!important;
+}
+
+/* modo papel claro opcional */
+#presentation.paper{
+  background:#efe7d8;
+}
+#presentation.paper .pres-top{
+  background:linear-gradient(180deg,#f6efe3,#e9dfd0);
+  border-color:#d0c2ae;
+}
+#presentation.paper .pres-title{
+  color:#7a5610;
+}
+#presentation.paper .pres-body{
+  background:
+    radial-gradient(circle at top,rgba(201,145,34,.09),transparent 32%),
+    linear-gradient(180deg,#f5efe4,#ece3d5);
+}
+#presentation.paper .lyricrow{
+  color:#29241f;
+}
+#presentation.paper .chordrow{
+  color:#b3261e;
+}
+#presentation.paper .pres-controls{
+  background:linear-gradient(180deg,#eee5d7,#dfd3c2);
+  border-color:#c9baa5;
+}
+#presentation.paper .pres-controls button,
+#presentation.paper .pres-theme-btn{
+  background:#d7cbb9!important;
+  color:#332b24!important;
+}
+#presentation.paper .pres-controls .play{
+  background:#d9a62e!important;
+  color:#211b13!important;
+}
+#presentation.paper .pres-controls .stop{
+  background:#a83333!important;
+  color:white!important;
+}
+#presentation.paper .pres-top .btn-dark{
+  background:#ddd1bf;
+  color:#362f28;
+  border-color:#c7b8a4;
+}
+
+@media(max-width:520px){
+  #presentation .pres-body{
+    padding:18px 12px 116px;
+  }
+  #presentation .musicline{
+    min-height:3.9em;
+    margin:.42em 0;
+  }
+  #presentation .chordrow{
+    height:1.45em;
+    margin-bottom:.26em;
+  }
+  #presentation .lyricrow{
+    line-height:1.62;
+  }
+  #presentation .musicline.break{
+    height:1.55em;
+    min-height:1.55em;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -105,7 +217,7 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
   <div class="help">Nesta versão, a posição de cada acorde é ligada à palavra/sílaba musical. A linha não é reorganizada automaticamente.</div>
 </section>
 </main>
-<div id="presentation"><div class="pres-top"><button class="btn btn-dark btn-sm" onclick="closePresentation()">✕ Sair</button><div id="pres-title" class="pres-title"></div><button class="btn btn-dark btn-sm" onclick="presFont(-1)">A−</button><button class="btn btn-dark btn-sm" onclick="presFont(1)">A+</button></div><div class="pres-body" id="pres-body"><div id="pres-cifra" class="cifra"></div></div><div class="pres-controls"><button id="scroll-btn" class="play" onclick="toggleScroll()">▶ Rolar</button><button onclick="setSpeed(.35)">Lento</button><button onclick="setSpeed(.7)">Médio</button><button onclick="setSpeed(1.15)">Rápido</button><button onclick="document.getElementById('pres-body').scrollTo({top:0,behavior:'smooth'})">↑ Início</button></div></div>
+<div id="presentation"><div class="pres-top"><button class="btn btn-dark btn-sm" onclick="closePresentation()">✕ Sair</button><div id="pres-title" class="pres-title"></div><button class="btn btn-dark btn-sm pres-theme-btn" id="pres-theme-btn" onclick="togglePresTheme()" title="Trocar fundo">☀</button><button class="btn btn-dark btn-sm" onclick="presFont(-1)">A−</button><button class="btn btn-dark btn-sm" onclick="presFont(1)">A+</button></div><div class="pres-body" id="pres-body"><div id="pres-cifra" class="cifra"></div></div><div class="pres-controls"><button id="scroll-btn" class="play" onclick="toggleScroll()">▶ Rolar</button><button onclick="setSpeed(.35)">Lento</button><button onclick="setSpeed(.7)">Médio</button><button onclick="setSpeed(1.15)">Rápido</button><button onclick="document.getElementById('pres-body').scrollTo({top:0,behavior:'smooth'})">↑ Início</button></div></div>
 <div id="toast" class="toast"></div>
 <script>
 const TONES=["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
@@ -124,14 +236,136 @@ function runSearch(){const q=document.getElementById('search').value.trim();if(!
 async function load(){try{const r=await fetch('/data/harpa.json?v=55',{cache:'no-store'});if(!r.ok)throw new Error('harpa.json não encontrado');const d=await r.json();DATA=d.items||[];renderList()}catch(e){document.getElementById('list').innerHTML=`<div class="panel">${esc(e.message)}</div>`}}
 function openHino(n){current=DATA.find(x=>x.number===n);if(!current)return;steps=0;fontSize=window.innerWidth<=520?12:15;document.getElementById('list-screen').classList.add('hidden');document.getElementById('detail-screen').classList.remove('hidden');document.getElementById('top-list').classList.remove('hidden');document.getElementById('detail-num').textContent='Hino '+current.number;document.getElementById('detail-name').textContent=current.title;document.getElementById('detail-original').textContent='Tom original: '+current.tone_label;refresh();window.scrollTo(0,0)}
 function showList(){closePresentation();document.getElementById('detail-screen').classList.add('hidden');document.getElementById('list-screen').classList.remove('hidden');document.getElementById('top-list').classList.add('hidden');window.scrollTo(0,0)}
-function lineHTML(line){if(line.break)return '<div class="musicline break"></div>';const chords=(line.chords||[]).map(c=>`<span class="chordmark" style="left:${c.pos}ch">${esc(txChord(c.chord,steps))}</span>`).join('');return `<div class="musicline"><div class="chordrow">${chords}</div><div class="lyricrow${line.em?' em':''}">${esc(line.text)}</div></div>`}
-function renderInto(id,size){const el=document.getElementById(id);el.style.fontSize=size+'px';el.innerHTML=(current.lines||[]).map(lineHTML).join('');fitIfNeeded(el,size)}
-function fitIfNeeded(el,requested){if(window.innerWidth>520)return;const container=el.parentElement;requestAnimationFrame(()=>{const available=container.clientWidth-2;const content=el.scrollWidth;if(content>available){const next=Math.max(9,requested*(available/content));el.style.fontSize=next+'px'}})}
+function lineHTML(line){
+  if(line.break)return '<div class="musicline break"></div>';
+  const chords=(line.chords||[]).map(c=>`<span class="chordmark" style="left:${c.pos}ch">${esc(txChord(c.chord,steps))}</span>`).join('');
+  return `<div class="musicline"><div class="chordrow">${chords}</div><div class="lyricrow${line.em?' em':''}">${esc(line.text)}</div></div>`;
+}
+
+// Divide frases longas no modo Apresentar, preservando a posição musical dos acordes.
+function presentationMaxChars(){
+  const w=window.innerWidth;
+  if(w<=360)return 31;
+  if(w<=400)return 34;
+  if(w<=460)return 37;
+  if(w<=520)return 40;
+  return 58;
+}
+function makeSegment(line,start,end,separatorStart){
+  let contentStart=start, contentEnd=end;
+  while(contentStart<contentEnd && /\s/.test(line.text[contentStart]))contentStart++;
+  while(contentEnd>contentStart && /\s/.test(line.text[contentEnd-1]))contentEnd--;
+  const text=line.text.slice(contentStart,contentEnd);
+  const chords=[];
+  for(const c of (line.chords||[])){
+    // acordes colocados no "/" pertencem ao começo da próxima frase
+    if(separatorStart!=null && c.pos>=separatorStart && c.pos<contentStart){
+      chords.push({pos:0,chord:c.chord});
+    }else if(c.pos>=contentStart && c.pos<contentEnd){
+      chords.push({pos:Math.max(0,c.pos-contentStart),chord:c.chord});
+    }
+  }
+  return {text,chords,em:line.em};
+}
+function splitRangeByWords(line,start,end,maxChars){
+  const result=[];
+  let s=start;
+  while(end-s>maxChars){
+    const ideal=s+maxChars;
+    let cut=-1;
+    // prefere vírgula/ponto e vírgula perto do limite
+    for(let i=ideal;i>=s+Math.floor(maxChars*.58);i--){
+      if(/[;,.:!?]/.test(line.text[i]||'')){cut=i+1;break;}
+    }
+    // senão quebra em espaço
+    if(cut<0){
+      for(let i=ideal;i>=s+Math.floor(maxChars*.58);i--){
+        if(/\s/.test(line.text[i]||'')){cut=i;break;}
+      }
+    }
+    if(cut<0)cut=ideal;
+    result.push(makeSegment(line,s,cut,null));
+    s=cut;
+    while(s<end && /\s/.test(line.text[s]))s++;
+  }
+  if(s<end)result.push(makeSegment(line,s,end,null));
+  return result;
+}
+function presentationLines(lines){
+  const maxChars=presentationMaxChars();
+  const out=[];
+  for(const line of lines){
+    if(line.break){out.push(line);continue;}
+    const text=line.text||'';
+    // Primeiro usa "/" como divisão musical natural.
+    const slashPositions=[];
+    for(let i=0;i<text.length;i++)if(text[i]==='/')slashPositions.push(i);
+    let ranges=[];
+    if(slashPositions.length){
+      let start=0;
+      for(const slash of slashPositions){
+        ranges.push({start,end:slash,sep:slash});
+        start=slash+1;
+      }
+      ranges.push({start,end:text.length,sep:slashPositions[slashPositions.length-1]});
+    }else{
+      ranges=[{start:0,end:text.length,sep:null}];
+    }
+    for(let ri=0;ri<ranges.length;ri++){
+      const r=ranges[ri];
+      let seg=makeSegment(line,r.start,r.end,ri>0?ranges[ri-1].sep:null);
+      if(seg.text.length>maxChars){
+        // reaplica os acordes em uma linha temporária para a quebra por palavras
+        const tmp={text:seg.text,chords:seg.chords,em:seg.em};
+        out.push(...splitRangeByWords(tmp,0,tmp.text.length,maxChars));
+      }else if(seg.text.length){
+        out.push(seg);
+      }
+    }
+  }
+  return out;
+}
+function renderInto(id,size){
+  const el=document.getElementById(id);
+  el.style.fontSize=size+'px';
+  const isPresentation=id==='pres-cifra';
+  const lines=isPresentation?presentationLines(current.lines||[]):(current.lines||[]);
+  el.innerHTML=lines.map(lineHTML).join('');
+  if(!isPresentation)fitIfNeeded(el,size);
+}
+function fitIfNeeded(el,requested){
+  if(window.innerWidth>520)return;
+  const container=el.parentElement;
+  requestAnimationFrame(()=>{
+    const available=container.clientWidth-2;
+    const content=el.scrollWidth;
+    if(content>available){
+      const next=Math.max(9,requested*(available/content));
+      el.style.fontSize=next+'px';
+    }
+  });
+}
 function refresh(){if(!current)return;document.getElementById('tone').textContent=currentTone()||'—';renderInto('cifra',fontSize);if(document.getElementById('presentation').classList.contains('on'))renderInto('pres-cifra',presSize)}
 function transpose(d){steps+=d;refresh()} function resetTone(){steps=0;document.getElementById('tone-select').value='';refresh()}
 function jumpTone(v){if(!v||!current)return;steps=((NMAP[v]-NMAP[current.tone])%12+12)%12;document.getElementById('tone-select').value='';refresh()}
 function changeFont(d){fontSize=Math.max(9,Math.min(26,fontSize+d));refresh()}
-function openPresentation(){if(!current)return;presSize=window.innerWidth<=520?13:17;document.getElementById('pres-title').textContent=`${current.number} · ${current.title} · ${currentTone()}`;document.getElementById('presentation').classList.add('on');document.body.style.overflow='hidden';renderInto('pres-cifra',presSize);document.getElementById('pres-body').scrollTop=0}
+
+function togglePresTheme(){
+  const p=document.getElementById('presentation');
+  const paper=p.classList.toggle('paper');
+  const b=document.getElementById('pres-theme-btn');
+  if(b)b.textContent=paper?'🌙':'☀';
+  localStorage.setItem('harpa_pres_theme',paper?'paper':'warm');
+}
+function applyPresTheme(){
+  const paper=localStorage.getItem('harpa_pres_theme')==='paper';
+  const p=document.getElementById('presentation');
+  if(p)p.classList.toggle('paper',paper);
+  const b=document.getElementById('pres-theme-btn');
+  if(b)b.textContent=paper?'🌙':'☀';
+}
+
+function openPresentation(){if(!current)return;applyPresTheme();presSize=window.innerWidth<=520?15:17;document.getElementById('pres-title').textContent=`${current.number} · ${current.title} · ${currentTone()}`;document.getElementById('presentation').classList.add('on');document.body.style.overflow='hidden';renderInto('pres-cifra',presSize);document.getElementById('pres-body').scrollTop=0}
 function closePresentation(){stopScroll();document.getElementById('presentation').classList.remove('on');document.body.style.overflow=''}
 function presFont(d){presSize=Math.max(9,Math.min(30,presSize+d));renderInto('pres-cifra',presSize)}
 function setSpeed(v){scrollSpeed=v;if(!scrolling)startScroll()} function toggleScroll(){scrolling?stopScroll():startScroll()}
@@ -140,6 +374,7 @@ function stopScroll(){scrolling=false;if(raf)cancelAnimationFrame(raf);raf=0;con
 function scrollLoop(ts){if(!scrolling)return;if(lastTs){const el=document.getElementById('pres-body');el.scrollTop+=(ts-lastTs)*.035*scrollSpeed;if(el.scrollTop+el.clientHeight>=el.scrollHeight-3){stopScroll();return}}lastTs=ts;raf=requestAnimationFrame(scrollLoop)}
 function serialize(){let rows=[];for(const line of current.lines||[]){if(line.break){rows.push('');continue}let chordrow=[];for(const c of line.chords||[]){while(chordrow.length<c.pos)chordrow.push(' ');const tc=txChord(c.chord,steps);for(let i=0;i<tc.length;i++)chordrow[c.pos+i]=tc[i]}rows.push(chordrow.join('').replace(/\s+$/,''));rows.push(line.text)}return rows.join('\n')}
 async function saveToLibrary(){if(!current)return;const btn=document.getElementById('save-btn');btn.disabled=true;try{const r=await fetch('/api/cifras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:`Harpa ${current.number} - ${current.title}`,tone:currentTone(),text:serialize(),singer_tones:[]})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Não foi possível salvar.');toast('✓ Hino salvo na biblioteca.')}catch(e){toast(e.message||'Erro ao salvar.',true)}finally{btn.disabled=false}}
+window.addEventListener('resize',()=>{if(current&&document.getElementById('presentation').classList.contains('on'))renderInto('pres-cifra',presSize)});
 document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._q);window._q=setTimeout(runSearch,140)});toneOptions();load();
 </script>
 </body></html>

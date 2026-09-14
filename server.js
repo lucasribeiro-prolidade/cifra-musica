@@ -1166,17 +1166,82 @@ app.post('/api/ai/read-document', requireAuth, aiLimiter, async (req, res) => {
   try {
     const base64 = String(req.body?.base64 || '');
     const mediaType = cleanString(req.body?.mediaType || 'application/pdf', 100);
-    if (!base64 || base64.length > 28_000_000) return res.status(400).json({ error: 'Arquivo ausente ou muito grande.' });
+    const filename = cleanString(req.body?.filename || '', 300);
+
+    if (!base64 || base64.length > 28_000_000) {
+      return res.status(400).json({ error: 'Arquivo ausente ou muito grande.' });
+    }
+
+    const isImage = /^image\/(jpeg|png|webp|gif)$/i.test(mediaType);
+    const isPdf = mediaType === 'application/pdf';
+
+    if (!isImage && !isPdf) {
+      return res.status(400).json({ error: 'Formato não suportado para leitura visual.' });
+    }
+
+    const visualBlock = isImage
+      ? {
+          type: 'image',
+          source: { type: 'base64', media_type: mediaType, data: base64 }
+        }
+      : {
+          type: 'document',
+          source: { type: 'base64', media_type: mediaType, data: base64 }
+        };
+
+    const instruction = isImage
+      ? `Leia esta fotografia de uma cifra musical (${filename || 'imagem'}).
+
+OBJETIVO:
+Transformar a fotografia em uma cifra limpa e editável para um músico tocar.
+
+REGRAS ABSOLUTAS:
+- Preserve o texto da música que estiver visível.
+- Preserve os nomes dos acordes exatamente como aparecem.
+- NÃO invente acordes que não estejam na imagem.
+- Cada acorde deve ficar alinhado sobre a palavra ou sílaba onde ele entra musicalmente.
+- NÃO junte todos os acordes no começo da linha.
+- Se um acorde estiver acima de uma palavra, preserve esse posicionamento usando espaços.
+- Preserve estrofes, refrões e quebras de linha quando forem identificáveis.
+- Ignore partitura, números de página, cabeçalhos, rodapés, propagandas e elementos que não pertençam à cifra.
+- Se alguma parte estiver ilegível, não adivinhe silenciosamente: use [?] no trecho duvidoso.
+- Se houver título, artista ou tom visível, extraia-os.
+
+RETORNE SOMENTE neste formato:
+TITULO: [nome, se identificado]
+ARTISTA: [artista, se identificado]
+TOM: [tom, se identificado]
+
+[cifra em texto monoespaçado, mantendo cada acorde na coluna correta acima da letra]`
+      : `Extraia e organize a cifra deste PDF (${filename || 'arquivo'}).
+
+REGRAS:
+- Preserve exatamente o alinhamento e os nomes dos acordes.
+- Não mova os acordes para o começo das linhas.
+- Mantenha cada acorde acima da palavra/sílaba correspondente.
+- Remova cabeçalhos, rodapés e textos que não fazem parte da cifra.
+- Não invente conteúdo ilegível.
+- Se houver título, artista ou tom, use:
+TITULO: ...
+ARTISTA: ...
+TOM: ...
+
+Depois retorne a cifra limpa e organizada.`;
+
     const data = await callAnthropic({
       model: AI_MODEL,
       max_tokens: 8000,
-      messages: [{ role: 'user', content: [
-        { type: 'document', source: { type: 'base64', media_type: mediaType, data: base64 } },
-        { type: 'text', text: 'Extraia e organize a cifra deste arquivo. Preserve exatamente o alinhamento e os nomes dos acordes. Remova cabecalhos, rodapes e textos que nao fazem parte da cifra. Se houver titulo, comece com TITULO: [nome]. Retorne apenas a cifra limpa e organizada.' }
-      ] }]
+      messages: [{
+        role: 'user',
+        content: [
+          visualBlock,
+          { type: 'text', text: instruction }
+        ]
+      }]
     });
+
     const text = anthropicText(data);
-    if (!text) throw new Error('A IA nao conseguiu ler o arquivo.');
+    if (!text) throw new Error('A IA não conseguiu ler o arquivo.');
     res.json({ text });
   } catch (err) {
     console.error('ai document', err.message);

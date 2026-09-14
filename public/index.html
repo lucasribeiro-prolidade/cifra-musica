@@ -786,6 +786,192 @@ main{max-width:760px}
   .help-intro{padding:12px}
 }
 
+
+/* v6.0 — Nova cifra por foto/câmera */
+.new-cifra-overlay{
+  position:fixed;
+  inset:0;
+  z-index:8800;
+  background:rgba(8,7,7,.72);
+  backdrop-filter:blur(5px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.new-cifra-overlay.open{opacity:1;pointer-events:auto}
+.new-cifra-panel{
+  width:100%;
+  max-width:560px;
+  background:linear-gradient(180deg,#29231f,#1b1917);
+  border:1px solid #443a31;
+  border-radius:22px;
+  box-shadow:0 28px 80px rgba(0,0,0,.42);
+  overflow:hidden;
+  transform:translateY(12px);
+  transition:transform .2s ease;
+}
+.new-cifra-overlay.open .new-cifra-panel{transform:translateY(0)}
+.new-cifra-head{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:17px;
+  border-bottom:1px solid #3a322b;
+  background:linear-gradient(180deg,#302922,#251f1b);
+}
+.new-cifra-head-icon{
+  width:44px;height:44px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:#453415;border:1px solid #6b501c;font-size:24px;
+}
+.new-cifra-head-text{flex:1;min-width:0}
+.new-cifra-head-text h2{
+  margin:0;color:#f5cb5c;font-family:var(--serif);font-size:20px
+}
+.new-cifra-head-text p{
+  margin:3px 0 0;color:#aa9e8d;font-size:11.5px;line-height:1.4
+}
+.new-cifra-close{
+  width:40px;height:40px;border-radius:12px;
+  border:1px solid #443c35;background:#2c2824;color:#ddd;font-size:20px
+}
+.new-cifra-body{padding:14px}
+.new-cifra-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px
+}
+.new-cifra-option{
+  min-height:112px;
+  border:1px solid #40372f;
+  background:linear-gradient(180deg,#2b2520,#211d1a);
+  color:#f0e8dc;
+  border-radius:16px;
+  padding:14px;
+  text-align:left;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:10px
+}
+.new-cifra-option:active{transform:scale(.98)}
+.new-cifra-option.primary{
+  border-color:#76581d;
+  background:linear-gradient(180deg,#403116,#2b2415)
+}
+.new-cifra-option .nco-icon{font-size:28px;line-height:1}
+.new-cifra-option strong{display:block;font-size:14px}
+.new-cifra-option small{
+  display:block;color:#aa9e8d;font-size:10.5px;line-height:1.4;margin-top:3px
+}
+.new-cifra-option.primary strong{color:#f7d66e}
+.new-cifra-note{
+  margin-top:11px;
+  padding:10px 11px;
+  border-radius:12px;
+  background:#1c2938;
+  border:1px solid #32465e;
+  color:#b9d6f2;
+  font-size:11px;
+  line-height:1.45
+}
+
+/* atalhos de importação dentro de Nova cifra */
+.capture-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin-bottom:10px
+}
+.capture-btn{
+  min-height:74px;
+  border:1px solid #40372f;
+  border-radius:13px;
+  background:linear-gradient(180deg,#29231f,#211d1a);
+  color:#eee4d7;
+  padding:9px 7px;
+  font-weight:800;
+  font-size:11px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px
+}
+.capture-btn span{font-size:22px;line-height:1}
+.capture-btn.camera{
+  border-color:#6b501c;
+  background:linear-gradient(180deg,#392c16,#292114);
+  color:#f5cf69
+}
+.capture-help{
+  text-align:center;
+  color:#8f8579;
+  font-size:10.5px;
+  margin:-1px 0 12px;
+  line-height:1.45
+}
+
+/* tela enquanto a IA lê a fotografia */
+.scan-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9200;
+  background:rgba(16,14,12,.92);
+  backdrop-filter:blur(8px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:22px
+}
+.scan-overlay.on{display:flex}
+.scan-card{
+  width:100%;
+  max-width:360px;
+  text-align:center;
+  background:linear-gradient(180deg,#2d2722,#1d1a18);
+  border:1px solid #473d34;
+  border-radius:20px;
+  padding:24px 20px;
+  box-shadow:0 22px 70px rgba(0,0,0,.45)
+}
+.scan-icon{
+  width:68px;height:68px;border-radius:20px;
+  margin:0 auto 14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:34px;
+  background:#443315;border:1px solid #6d511a
+}
+.scan-spinner{
+  width:30px;height:30px;border-radius:50%;
+  border:3px solid #4a4139;border-top-color:#f5c842;
+  margin:0 auto 14px;animation:spin .8s linear infinite
+}
+.scan-card h3{margin:0 0 6px;color:#f3eadb;font-size:17px}
+.scan-card p{margin:0;color:#a99d8c;font-size:12px;line-height:1.5}
+.scan-card small{display:block;color:#71685f;font-size:10px;margin-top:12px}
+
+@media(max-width:620px){
+  .new-cifra-overlay{padding:0;align-items:flex-end}
+  .new-cifra-panel{
+    border-radius:24px 24px 0 0;
+    border-bottom:0;
+    max-height:90vh;
+    overflow-y:auto
+  }
+  .new-cifra-body{padding:12px 12px calc(16px + env(safe-area-inset-bottom))}
+  .new-cifra-option{min-height:104px;padding:12px}
+}
+@media(max-width:380px){
+  .new-cifra-grid{grid-template-columns:1fr}
+  .new-cifra-option{min-height:84px}
+  .capture-grid{grid-template-columns:1fr 1fr}
+}
+
 </style>
 </head>
 <body class="auth-pending">
@@ -921,7 +1107,7 @@ main{max-width:760px}
       <div class="help-grid">
         <div class="help-step">
           <div class="help-step-top"><div class="help-step-icon">➕</div><h3>1. Nova cifra</h3></div>
-          <p>Toque em <b>Nova cifra</b>. Cole uma cifra, importe um arquivo ou escreva manualmente. Depois visualize e salve na biblioteca.</p>
+          <p>Toque em <b>Nova cifra</b>. Você pode tirar uma foto, escolher da galeria, importar PDF/Word/TXT ou colar o texto. A IA organiza e você confere antes de salvar.</p>
         </div>
 
         <div class="help-step">
@@ -981,6 +1167,53 @@ main{max-width:760px}
   </div>
 </div>
 
+
+<div class="new-cifra-overlay" id="new-cifra-overlay" onclick="closeNewCifraMenu()">
+  <div class="new-cifra-panel" onclick="event.stopPropagation()">
+    <div class="new-cifra-head">
+      <div class="new-cifra-head-icon">➕</div>
+      <div class="new-cifra-head-text">
+        <h2>Nova cifra</h2>
+        <p>Escolha como você quer adicionar a música.</p>
+      </div>
+      <button class="new-cifra-close" onclick="closeNewCifraMenu()" aria-label="Fechar">×</button>
+    </div>
+    <div class="new-cifra-body">
+      <div class="new-cifra-grid">
+        <button class="new-cifra-option primary" onclick="chooseCamera()">
+          <span class="nco-icon">📷</span>
+          <span><strong>Tirar foto</strong><small>Fotografe uma cifra impressa, folha ou caderno.</small></span>
+        </button>
+        <button class="new-cifra-option" onclick="chooseGallery()">
+          <span class="nco-icon">🖼️</span>
+          <span><strong>Escolher foto</strong><small>Use uma imagem já salva na galeria.</small></span>
+        </button>
+        <button class="new-cifra-option" onclick="chooseDocument()">
+          <span class="nco-icon">📄</span>
+          <span><strong>PDF / Word / TXT</strong><small>Importe um arquivo que você já possui.</small></span>
+        </button>
+        <button class="new-cifra-option" onclick="newCifraPaste()">
+          <span class="nco-icon">📋</span>
+          <span><strong>Colar ou digitar</strong><small>Cole uma cifra da internet ou escreva manualmente.</small></span>
+        </button>
+      </div>
+      <div class="new-cifra-note">
+        ✨ <strong>Foto inteligente:</strong> o sistema tenta identificar título, letra e acordes mantendo cada acorde sobre o ponto correto da música. Você sempre poderá revisar antes de salvar.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="scan-overlay" id="scan-overlay">
+  <div class="scan-card">
+    <div class="scan-icon">📷</div>
+    <div class="scan-spinner"></div>
+    <h3 id="scan-title">Lendo sua cifra...</h3>
+    <p id="scan-text">A IA está identificando a letra e a posição dos acordes.</p>
+    <small>Fotos nítidas, retas e com boa iluminação dão melhores resultados.</small>
+  </div>
+</div>
+
 <main>
   <section class="home-screen" id="home-screen">
     <div class="home-welcome">
@@ -988,7 +1221,7 @@ main{max-width:760px}
       <p>Abra seu repertório, encontre uma música ou continue de onde parou.</p>
     </div>
     <div class="home-grid">
-      <button class="home-card" onclick="newCifra()"><span class="home-card-icon">➕</span><span><span class="home-card-title">Nova cifra</span><br><span class="home-card-sub">Colar, importar ou criar uma nova música.</span></span></button>
+      <button class="home-card" onclick="openNewCifraMenu()"><span class="home-card-icon">➕</span><span><span class="home-card-title">Nova cifra</span><br><span class="home-card-sub">Foto, galeria, PDF, colar ou criar.</span></span></button>
       <button class="home-card" onclick="openLibrary()"><span class="home-card-icon">📚</span><span><span class="home-card-title">Minha biblioteca</span><br><span class="home-card-sub"><strong id="home-lib-count">0</strong> cifra(s) salvas na nuvem.</span></span></button>
       <button class="home-card" onclick="openHarpa()"><span class="home-card-icon">📖</span><span><span class="home-card-title">Harpa Cristã</span><br><span class="home-card-sub">Harpa Cristã Cifrada completa, hinos 1 a 640.</span></span></button>
       <button class="home-card" onclick="openGroups()"><span class="home-card-icon">👥</span><span><span class="home-card-title">Grupos</span><br><span class="home-card-sub">Pastas e repertórios compartilhados.</span></span></button>
@@ -1045,13 +1278,25 @@ main{max-width:760px}
 
   <!-- EDITOR -->
   <div id="panel-editor">
-    <!-- Importar PDF/Word -->
-    <button class="import-zone" onclick="document.getElementById('file-input').click()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      📄 Importar PDF ou Word (.docx)
-    </button>
+    <!-- Foto / galeria / arquivo -->
+    <div class="capture-grid">
+      <button class="capture-btn camera" onclick="document.getElementById('camera-input').click()">
+        <span>📷</span>
+        Tirar foto
+      </button>
+      <button class="capture-btn" onclick="document.getElementById('gallery-input').click()">
+        <span>🖼️</span>
+        Galeria
+      </button>
+      <button class="capture-btn" onclick="document.getElementById('file-input').click()">
+        <span>📄</span>
+        PDF / Word
+      </button>
+    </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleImageFile(event,'camera')">
+    <input type="file" id="gallery-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="handleImageFile(event,'gallery')">
     <input type="file" id="file-input" accept=".pdf,.docx,.txt" style="display:none" onchange="handleFile(event)">
-    <div class="import-hint">A IA lê o arquivo e organiza a cifra automaticamente</div>
+    <div class="capture-help">A IA lê a foto ou o arquivo e organiza letra + acordes. Depois você confere antes de salvar.</div>
 
     <div class="divider"><div class="divider-line"></div><span>ou cole o texto</span><div class="divider-line"></div></div>
 
@@ -1835,6 +2080,138 @@ function clearSearch(){
   document.getElementById("search-result").classList.remove("on");
   document.getElementById("no-api-box").style.display="none";
   lastResult="";
+}
+
+
+// ══════════════════════════════════════════════════════
+// NOVA CIFRA — FOTO / CÂMERA / GALERIA
+// ══════════════════════════════════════════════════════
+function openNewCifraMenu(){
+  closeMobileNav();
+  closeHelp();
+  const el=document.getElementById("new-cifra-overlay");
+  if(el)el.classList.add("open");
+}
+function closeNewCifraMenu(){
+  const el=document.getElementById("new-cifra-overlay");
+  if(el)el.classList.remove("open");
+}
+function chooseCamera(){
+  closeNewCifraMenu();
+  document.getElementById("camera-input").click();
+}
+function chooseGallery(){
+  closeNewCifraMenu();
+  document.getElementById("gallery-input").click();
+}
+function chooseDocument(){
+  closeNewCifraMenu();
+  document.getElementById("file-input").click();
+}
+function newCifraPaste(){
+  closeNewCifraMenu();
+  newCifra();
+  setTimeout(()=>document.getElementById("raw-input")?.focus(),100);
+}
+
+function showScanStatus(title,text){
+  const o=document.getElementById("scan-overlay");
+  if(!o)return;
+  document.getElementById("scan-title").textContent=title||"Lendo sua cifra...";
+  document.getElementById("scan-text").textContent=text||"A IA está identificando a letra e os acordes.";
+  o.classList.add("on");
+}
+function hideScanStatus(){
+  document.getElementById("scan-overlay")?.classList.remove("on");
+}
+
+function loadImageElement(file){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{URL.revokeObjectURL(url);resolve(img);};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("Não consegui abrir esta imagem."));};
+    img.src=url;
+  });
+}
+
+async function prepareImageForAI(file){
+  const supported=["image/jpeg","image/png","image/webp","image/gif"];
+  if(!supported.includes(file.type)){
+    throw new Error("Use uma foto JPG, PNG ou WebP. Se sua foto estiver em HEIC, abra e salve como JPG primeiro.");
+  }
+
+  // GIF segue sem conversão.
+  if(file.type==="image/gif"){
+    return {blob:file,mediaType:file.type};
+  }
+
+  const img=await loadImageElement(file);
+  const maxSide=2200;
+  const scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
+  const width=Math.max(1,Math.round(img.naturalWidth*scale));
+  const height=Math.max(1,Math.round(img.naturalHeight*scale));
+
+  const canvas=document.createElement("canvas");
+  canvas.width=width;
+  canvas.height=height;
+  const ctx=canvas.getContext("2d",{alpha:false});
+  ctx.fillStyle="#fff";
+  ctx.fillRect(0,0,width,height);
+  ctx.drawImage(img,0,0,width,height);
+
+  const blob=await new Promise((resolve,reject)=>{
+    canvas.toBlob(b=>b?resolve(b):reject(new Error("Não consegui preparar a fotografia.")),"image/jpeg",0.9);
+  });
+
+  if(blob.size>8*1024*1024){
+    throw new Error("A fotografia ficou muito grande. Tente fotografar novamente mais perto da cifra.");
+  }
+  return {blob,mediaType:"image/jpeg"};
+}
+
+async function handleImageFile(event,source){
+  const file=event.target.files?.[0];
+  event.target.value="";
+  if(!file)return;
+
+  if(!aiConfigured){
+    toast("A IA ainda não foi configurada no servidor.",1);
+    openApiModal();
+    return;
+  }
+
+  // Começa uma cifra nova para não misturar com a anterior.
+  newCifra();
+
+  try{
+    showScanStatus(
+      source==="camera"?"Preparando a foto...":"Preparando a imagem...",
+      "Ajustando o tamanho para manter a leitura nítida e rápida."
+    );
+
+    const prepared=await prepareImageForAI(file);
+
+    showScanStatus(
+      "Lendo letra e acordes...",
+      "A IA está organizando a cifra e preservando o ponto de entrada de cada acorde."
+    );
+
+    const base64=await toBase64(prepared.blob);
+    const txt=await readWithClaude(base64,prepared.mediaType,file.name||"foto-cifra.jpg");
+
+    showScanStatus(
+      "Montando a cifra...",
+      "Quase pronto. Preparando a tela para você conferir."
+    );
+
+    setCifraAndPreview(txt,file.name||"Foto da cifra");
+    toast("✓ Foto convertida. Confira a cifra antes de salvar.");
+  }catch(e){
+    toast("Erro na foto: "+(e.message||"não foi possível ler a cifra."),1);
+  }finally{
+    hideScanStatus();
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -2724,6 +3101,7 @@ function presFontSize(d){pfz=Math.min(48,Math.max(8,pfz+d));document.getElementB
 // NEW CIFRA
 // ══════════════════════════════════════════════════════
 function newCifra(){
+  closeNewCifraMenu();
   cifra="";st=0;currentCifraId=null;currentSingerTones=[];currentSharedContext=null;pendingShareRepertoireId=null;
   ["raw-input","cifra-editor","song-title"].forEach(id=>document.getElementById(id).value="");
   setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();setManualEditor(false);updateHomeCurrent();
@@ -2748,7 +3126,7 @@ function toast(msg,err=0){
 updateDot();
 document.getElementById("cifra-editor").style.fontSize=edFs+"px";
 initApp();
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePresentation();closeGroups();}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePresentation();closeGroups();closeNewCifraMenu();hideScanStatus();}});
 </script>
 
 <script>

@@ -972,6 +972,54 @@ main{max-width:760px}
   .capture-grid{grid-template-columns:1fr 1fr}
 }
 
+
+/* v6.1 — salvar com cantor + Harpa igual na Biblioteca */
+.save-singer-overlay{
+  position:fixed;inset:0;z-index:9100;background:rgba(8,7,7,.74);
+  backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;
+  padding:18px;opacity:0;pointer-events:none;transition:opacity .2s ease
+}
+.save-singer-overlay.open{opacity:1;pointer-events:auto}
+.save-singer-panel{
+  width:100%;max-width:470px;background:linear-gradient(180deg,#2b2520,#1c1917);
+  border:1px solid #463b32;border-radius:20px;box-shadow:0 26px 70px rgba(0,0,0,.45);
+  overflow:hidden;transform:translateY(10px);transition:transform .2s ease
+}
+.save-singer-overlay.open .save-singer-panel{transform:translateY(0)}
+.save-singer-head{display:flex;align-items:center;gap:11px;padding:16px;border-bottom:1px solid #3b332c}
+.save-singer-head .ico{width:42px;height:42px;border-radius:13px;background:#302047;border:1px solid #54316d;display:flex;align-items:center;justify-content:center;font-size:23px}
+.save-singer-head .txt{flex:1;min-width:0}.save-singer-head h3{margin:0;color:#f2e9dc;font-size:17px}.save-singer-head p{margin:3px 0 0;color:#a69a89;font-size:11px}
+.save-singer-close{width:38px;height:38px;border-radius:11px;border:1px solid #443c35;background:#2c2824;color:#ddd;font-size:19px}
+.save-singer-body{padding:15px}.save-singer-field{margin-bottom:12px}.save-singer-field label{display:block;color:#b8ac99;font-size:11px;font-weight:700;margin-bottom:6px}
+.save-singer-field select{width:100%;background:#1a1816;border:1px solid #443b33;color:#f1e8db;border-radius:11px;padding:12px;font-size:14px}
+.save-singer-tone-row{display:grid;grid-template-columns:1fr 110px;gap:9px}
+.save-singer-current{background:#211e1b;border:1px solid #3c352f;border-radius:11px;padding:10px 12px;color:#aba092;font-size:11px;line-height:1.45;margin-bottom:12px}
+.save-singer-current strong{color:#f5c842;font-size:14px}
+.save-singer-actions{display:grid;grid-template-columns:1fr 1.25fr;gap:9px}
+.save-singer-actions button{min-height:46px}
+
+/* Harpa salva na Biblioteca usa o mesmo estilo do apresentador da Harpa */
+#presentation.harpa-mode{background:#29241f}
+#presentation.harpa-mode .pres-top{background:linear-gradient(180deg,#373029,#2d2823);border-color:#4a4037;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+#presentation.harpa-mode .pres-content{background:radial-gradient(circle at top,rgba(245,200,66,.07),transparent 30%),linear-gradient(180deg,#2b2621 0%,#231f1c 100%);padding:20px 14px 118px;overflow-x:hidden}
+#presentation.harpa-mode .pres-controls{background:linear-gradient(180deg,#312b26,#29241f);border-color:#493f36}
+#presentation.harpa-mode .cifra-display{width:100%;max-width:100%;overflow-x:hidden;line-height:1.5}
+#presentation.harpa-mode .chord-lyric-pair{margin:8px 0 14px;min-height:3.1em}
+#presentation.harpa-mode .chord-row{height:1.35em;margin-bottom:.25em;color:#ff7b70}
+#presentation.harpa-mode .lyric-line{color:#fff8ec;line-height:1.55;white-space:pre}
+#presentation.harpa-mode .section-label{margin-top:18px;color:#f5cf69}
+#presentation.harpa-mode .harpa-blank{height:1em}
+
+@media(max-width:620px){
+  .save-singer-overlay{padding:0;align-items:flex-end}
+  .save-singer-panel{border-radius:22px 22px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+  #presentation.harpa-mode .pres-content{padding:18px 12px 112px}
+  #presentation.harpa-mode .cifra-display{font-size:15px!important}
+  #presentation.harpa-mode .chord-lyric-pair{margin:10px 0 16px;min-height:3.3em}
+  #presentation.harpa-mode .chord-row{height:1.42em;margin-bottom:.28em}
+  #presentation.harpa-mode .lyric-line{line-height:1.62}
+}
+
 </style>
 </head>
 <body class="auth-pending">
@@ -1211,6 +1259,34 @@ main{max-width:760px}
     <h3 id="scan-title">Lendo sua cifra...</h3>
     <p id="scan-text">A IA está identificando a letra e a posição dos acordes.</p>
     <small>Fotos nítidas, retas e com boa iluminação dão melhores resultados.</small>
+  </div>
+</div>
+
+
+<div class="save-singer-overlay" id="save-singer-overlay" onclick="closeSaveSingerModal()">
+  <div class="save-singer-panel" onclick="event.stopPropagation()">
+    <div class="save-singer-head">
+      <div class="ico">🎤</div>
+      <div class="txt"><h3>Quem vai cantar?</h3><p>Salve a música já vinculada ao cantor e ao tom dele.</p></div>
+      <button class="save-singer-close" onclick="closeSaveSingerModal()">×</button>
+    </div>
+    <div class="save-singer-body">
+      <div class="save-singer-current">Tom em que a cifra está agora: <strong id="save-current-tone">—</strong></div>
+      <div class="save-singer-tone-row">
+        <div class="save-singer-field">
+          <label>CANTOR</label>
+          <select id="save-singer-select"><option value="">Sem cantor</option></select>
+        </div>
+        <div class="save-singer-field">
+          <label>TOM DO CANTOR</label>
+          <select id="save-singer-tone"></select>
+        </div>
+      </div>
+      <div class="save-singer-actions">
+        <button class="btn btn-dark" onclick="saveWithoutNewSinger()">Salvar sem cantor</button>
+        <button class="btn btn-gold" onclick="confirmSaveWithSinger()">🎤 Salvar cifra</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1543,6 +1619,80 @@ function renderCifra(text){
       else html+=`<div class="lyric-line">${s||"&nbsp;"}</div>`;
       i++;
     }
+  }
+  return html;
+}
+
+
+function isSavedHarpa(){
+  const title=(document.getElementById("song-title")?.value||"").trim();
+  return /^Harpa\s+\d+\s*-/i.test(title);
+}
+function harpaPresentationMaxChars(){
+  const w=window.innerWidth;
+  if(w<=360)return 31;if(w<=400)return 34;if(w<=460)return 37;if(w<=520)return 40;return 58;
+}
+function harpaMakeTextSegment(lyric,chords,start,end,carryPos=null){
+  let a=start,b=end;
+  while(a<b&&/\s/.test(lyric[a]||""))a++;
+  while(b>a&&/\s/.test(lyric[b-1]||""))b--;
+  const text=lyric.slice(a,b);
+  const out=[];
+  for(const c of chords){
+    if(carryPos!=null&&c.pos>=carryPos&&c.pos<a)out.push({text:c.text,pos:0});
+    else if(c.pos>=a&&c.pos<b)out.push({text:c.text,pos:Math.max(0,c.pos-a)});
+  }
+  return {text,chords:out};
+}
+function harpaSplitLongSegment(seg,maxChars){
+  const result=[];let s=0;const end=seg.text.length;
+  while(end-s>maxChars){
+    const ideal=s+maxChars;let cut=-1;
+    for(let i=ideal;i>=s+Math.floor(maxChars*.58);i--){if(/[;,.:!?]/.test(seg.text[i]||"")){cut=i+1;break;}}
+    if(cut<0)for(let i=ideal;i>=s+Math.floor(maxChars*.58);i--){if(/\s/.test(seg.text[i]||"")){cut=i;break;}}
+    if(cut<0)cut=ideal;
+    result.push(harpaMakeTextSegment(seg.text,seg.chords,s,cut,null));s=cut;
+    while(s<end&&/\s/.test(seg.text[s]||""))s++;
+  }
+  if(s<end)result.push(harpaMakeTextSegment(seg.text,seg.chords,s,end,null));
+  return result;
+}
+function harpaPairSegments(chordLine,lyricLine){
+  const chords=parseChordsWithPos(chordLine);const max=harpaPresentationMaxChars();
+  const slashes=[];for(let i=0;i<lyricLine.length;i++)if(lyricLine[i]==="/")slashes.push(i);
+  const ranges=[];let start=0;
+  if(slashes.length){for(const slash of slashes){ranges.push({start,end:slash,slash});start=slash+1;}ranges.push({start,end:lyricLine.length,slash:null});}
+  else ranges.push({start:0,end:lyricLine.length,slash:null});
+  const out=[];
+  ranges.forEach((r,idx)=>{
+    const carry=idx>0?slashes[idx-1]:null;
+    const seg=harpaMakeTextSegment(lyricLine,chords,r.start,r.end,carry);
+    if(!seg.text)return;
+    if(seg.text.length>max)out.push(...harpaSplitLongSegment(seg,max));else out.push(seg);
+  });
+  return out;
+}
+function renderSavedHarpaPresentation(text){
+  const lines=text.split("\n");let html="",i=0;
+  while(i<lines.length){
+    const line=lines[i],next=i+1<lines.length?lines[i+1]:null;
+    if(isChord(line)&&next!==null&&!isChord(next)){
+      const segs=harpaPairSegments(line,next);
+      for(const seg of segs){
+        const spans=seg.chords.map(c=>`<span class="chord-abs" style="left:${c.pos}ch">${esc(c.text)}</span>`).join("");
+        html+=`<div class="chord-lyric-pair"><div class="chord-row">${spans}</div><div class="lyric-line">${esc(seg.text)||"&nbsp;"}</div></div>`;
+      }
+      i+=2;continue;
+    }
+    if(!line.trim()){html+='<div class="harpa-blank"></div>';i++;continue;}
+    if(line.startsWith("[")&&line.includes("]"))html+=`<div class="section-label">${esc(line)}</div>`;
+    else{
+      const max=harpaPresentationMaxChars();
+      if(line.length>max){
+        const segs=harpaSplitLongSegment({text:line,chords:[]},max);segs.forEach(s=>html+=`<div class="lyric-line">${esc(s.text)}</div>`);
+      }else html+=`<div class="lyric-line">${esc(line)}</div>`;
+    }
+    i++;
   }
   return html;
 }
@@ -1965,7 +2115,7 @@ function closeHelp(){
   }
 }
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape")closeHelp();
+  if(e.key==="Escape"){closeHelp();closeSaveSingerModal();}
 });
 
 // ══════════════════════════════════════════════════════
@@ -2370,7 +2520,44 @@ function jumpToTone(val){
 // ══════════════════════════════════════════════════════
 // SAVE / LIBRARY
 // ══════════════════════════════════════════════════════
-async function saveCifra(){
+
+function openSaveSingerModal(){
+  const text=txText(cifra,st);
+  if(!text.trim()){toast("Nada para salvar!",1);return;}
+  if(!currentUser){toast("Entre na sua conta para salvar na nuvem.",1);return;}
+  if(isCurrentReadOnly()){toast("Você tem acesso somente para visualizar esta música.",1);return;}
+
+  const sel=document.getElementById("save-singer-select");
+  const tone=document.getElementById("save-singer-tone");
+  const currentTone=currentDisplayedTone()||detectKey(text)||"";
+  document.getElementById("save-current-tone").textContent=currentTone||"Não identificado";
+  sel.innerHTML='<option value="">Sem cantor</option>'+singers.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  tone.innerHTML=toneOptions(currentTone).replace('<option value="">Tom...</option>','');
+
+  if(currentSingerTones.length){
+    sel.value=currentSingerTones[0].singer_id||"";
+    if(currentSingerTones[0].tone)tone.value=currentSingerTones[0].tone;
+  }
+  document.getElementById("save-singer-overlay").classList.add("open");
+}
+function closeSaveSingerModal(){document.getElementById("save-singer-overlay")?.classList.remove("open")}
+function saveCifra(){openSaveSingerModal()}
+function saveWithoutNewSinger(){closeSaveSingerModal();saveCifraNow()}
+function confirmSaveWithSinger(){
+  const singerId=document.getElementById("save-singer-select").value;
+  const tone=document.getElementById("save-singer-tone").value||currentDisplayedTone()||"";
+  if(singerId){
+    const singer=singers.find(s=>s.id===singerId);
+    const existing=currentSingerTones.find(x=>x.singer_id===singerId);
+    if(existing){existing.tone=tone;existing.name=singer?.name||existing.name||"";}
+    else currentSingerTones.push({singer_id:singerId,name:singer?.name||"",tone});
+    renderSingerAssignments();
+  }
+  closeSaveSingerModal();
+  saveCifraNow();
+}
+
+async function saveCifraNow(){
   const text=txText(cifra,st);
   if(!text.trim()){toast("Nada para salvar!",1);return;}
   if(!currentUser){toast("Entre na sua conta para salvar na nuvem.",1);return;}
@@ -3026,12 +3213,18 @@ let scrolling=false,spd="super",raf=null,pfz=16,wakeLock=null,keepAwakeTimer=nul
 function openPresentation(){
   const text=txText(cifra,st);
   if(!text.trim()){toast("Nenhuma cifra carregada!",1);return;}
-  document.getElementById("pres-title").textContent=document.getElementById("song-title").value||"Apresentação";
+  const title=document.getElementById("song-title").value||"Apresentação";
+  const isHarpa=isSavedHarpa();
+  const p=document.getElementById("presentation");
+  p.classList.toggle("harpa-mode",isHarpa);
+  const singer=currentSingerTones?.[0];
+  const singerInfo=singer?` · 🎤 ${singer.name||"Cantor"}${singer.tone?" · "+singer.tone:""}`:"";
+  document.getElementById("pres-title").textContent=title+singerInfo;
   const d=document.getElementById("pres-display");
-  d.style.fontSize=pfz+"px";d.innerHTML=renderCifra(text);
+  d.style.fontSize=(isHarpa&&window.innerWidth<=620?15:pfz)+"px";
+  d.innerHTML=isHarpa?renderSavedHarpaPresentation(text):renderCifra(text);
   document.getElementById("pres-content").scrollTop=0;
-  document.getElementById("presentation").classList.add("on");
-  document.body.style.overflow="hidden";
+  p.classList.add("on");document.body.style.overflow="hidden";
   scrolling=false;updateScrollBtn();
 }
 function closePresentation(){

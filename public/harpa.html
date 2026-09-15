@@ -200,6 +200,15 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
   }
 }
 
+
+/* v6.1 — salvar hino escolhendo cantor */
+.harpa-save-overlay{position:fixed;inset:0;z-index:7000;background:rgba(8,7,7,.75);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;pointer-events:none;transition:.2s}
+.harpa-save-overlay.open{opacity:1;pointer-events:auto}
+.harpa-save-panel{width:100%;max-width:450px;background:linear-gradient(180deg,#2b2520,#1b1917);border:1px solid #463b32;border-radius:20px;overflow:hidden;box-shadow:0 26px 70px rgba(0,0,0,.45)}
+.harpa-save-head{display:flex;align-items:center;gap:10px;padding:16px;border-bottom:1px solid #3b332c}.harpa-save-head h3{margin:0;color:#f5cb5c;font-size:17px;flex:1}.harpa-save-head button{width:38px;height:38px;border-radius:11px;border:1px solid #443c35;background:#2c2824;color:#ddd;font-size:19px}
+.harpa-save-body{padding:15px}.harpa-save-body label{display:block;color:#aea18e;font-size:11px;font-weight:800;margin:0 0 6px}.harpa-save-body select{width:100%;background:#191715;border:1px solid #443b33;color:#eee5d8;border-radius:11px;padding:12px;margin-bottom:11px;font-size:14px}.harpa-save-note{background:#211e1b;border:1px solid #3b342d;border-radius:11px;padding:10px 12px;color:#a99d8c;font-size:11px;line-height:1.45;margin-bottom:12px}.harpa-save-note strong{color:#f5c842}.harpa-save-actions{display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
+@media(max-width:520px){.harpa-save-overlay{padding:0;align-items:flex-end}.harpa-save-panel{border-radius:22px 22px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}}
+
 </style>
 </head>
 <body>
@@ -218,6 +227,19 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 </section>
 </main>
 <div id="presentation"><div class="pres-top"><button class="btn btn-dark btn-sm" onclick="closePresentation()">✕ Sair</button><div id="pres-title" class="pres-title"></div><button class="btn btn-dark btn-sm pres-theme-btn" id="pres-theme-btn" onclick="togglePresTheme()" title="Trocar fundo">☀</button><button class="btn btn-dark btn-sm" onclick="presFont(-1)">A−</button><button class="btn btn-dark btn-sm" onclick="presFont(1)">A+</button></div><div class="pres-body" id="pres-body"><div id="pres-cifra" class="cifra"></div></div><div class="pres-controls"><button id="scroll-btn" class="play" onclick="toggleScroll()">▶ Rolar</button><button onclick="setSpeed(.35)">Lento</button><button onclick="setSpeed(.7)">Médio</button><button onclick="setSpeed(1.15)">Rápido</button><button onclick="document.getElementById('pres-body').scrollTo({top:0,behavior:'smooth'})">↑ Início</button></div></div>
+
+<div class="harpa-save-overlay" id="harpa-save-overlay" onclick="closeHarpaSave()">
+  <div class="harpa-save-panel" onclick="event.stopPropagation()">
+    <div class="harpa-save-head"><span style="font-size:24px">🎤</span><h3>Salvar para quem cantar?</h3><button onclick="closeHarpaSave()">×</button></div>
+    <div class="harpa-save-body">
+      <div class="harpa-save-note">O hino será salvo no tom <strong id="harpa-save-current-tone">—</strong>. Escolha o cantor para guardar esta versão já no tom dele.</div>
+      <label>CANTOR</label><select id="harpa-save-singer"><option value="">Sem cantor</option></select>
+      <label>TOM DO CANTOR</label><select id="harpa-save-tone"></select>
+      <div class="harpa-save-actions"><button class="btn btn-dark" onclick="saveHarpaNow(false)">Sem cantor</button><button class="btn btn-gold" onclick="saveHarpaNow(true)">🎤 Salvar</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 <script>
 const TONES=["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
@@ -373,7 +395,38 @@ function startScroll(){scrolling=true;lastTs=0;const b=document.getElementById('
 function stopScroll(){scrolling=false;if(raf)cancelAnimationFrame(raf);raf=0;const b=document.getElementById('scroll-btn');if(b){b.textContent='▶ Rolar';b.className='play'}}
 function scrollLoop(ts){if(!scrolling)return;if(lastTs){const el=document.getElementById('pres-body');el.scrollTop+=(ts-lastTs)*.035*scrollSpeed;if(el.scrollTop+el.clientHeight>=el.scrollHeight-3){stopScroll();return}}lastTs=ts;raf=requestAnimationFrame(scrollLoop)}
 function serialize(){let rows=[];for(const line of current.lines||[]){if(line.break){rows.push('');continue}let chordrow=[];for(const c of line.chords||[]){while(chordrow.length<c.pos)chordrow.push(' ');const tc=txChord(c.chord,steps);for(let i=0;i<tc.length;i++)chordrow[c.pos+i]=tc[i]}rows.push(chordrow.join('').replace(/\s+$/,''));rows.push(line.text)}return rows.join('\n')}
-async function saveToLibrary(){if(!current)return;const btn=document.getElementById('save-btn');btn.disabled=true;try{const r=await fetch('/api/cifras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:`Harpa ${current.number} - ${current.title}`,tone:currentTone(),text:serialize(),singer_tones:[]})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Não foi possível salvar.');toast('✓ Hino salvo na biblioteca.')}catch(e){toast(e.message||'Erro ao salvar.',true)}finally{btn.disabled=false}}
+let harpaSingers=[];
+async function openHarpaSave(){
+  if(!current)return;
+  const btn=document.getElementById('save-btn');btn.disabled=true;
+  try{
+    const r=await fetch('/api/cantores');const d=await r.json().catch(()=>({}));
+    if(!r.ok&&r.status!==401)throw new Error(d.error||'Não consegui carregar cantores.');
+    harpaSingers=(d.items||[]).map(x=>({id:x.id,name:x.name}));
+  }catch(e){harpaSingers=[];}
+  finally{btn.disabled=false;}
+  document.getElementById('harpa-save-current-tone').textContent=currentTone()||'—';
+  document.getElementById('harpa-save-singer').innerHTML='<option value="">Sem cantor</option>'+harpaSingers.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  document.getElementById('harpa-save-tone').innerHTML=TONES.map(t=>`<option value="${t}" ${t===currentTone()?'selected':''}>${t}</option>`).join('');
+  document.getElementById('harpa-save-overlay').classList.add('open');
+}
+function closeHarpaSave(){document.getElementById('harpa-save-overlay')?.classList.remove('open')}
+async function saveHarpaNow(withSinger){
+  if(!current)return;
+  const singerId=withSinger?document.getElementById('harpa-save-singer').value:'';
+  const singerTone=document.getElementById('harpa-save-tone').value||currentTone();
+  if(withSinger&&!singerId){toast('Escolha um cantor ou use Sem cantor.',true);return;}
+  closeHarpaSave();
+  const btn=document.getElementById('save-btn');btn.disabled=true;
+  try{
+    const singer_tones=singerId?[{singer_id:singerId,tone:singerTone}]:[];
+    const r=await fetch('/api/cifras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:`Harpa ${current.number} - ${current.title}`,tone:currentTone(),text:serialize(),singer_tones})});
+    const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Não foi possível salvar.');
+    const singer=harpaSingers.find(s=>s.id===singerId);
+    toast(singer?`✓ Salvo para ${singer.name} no tom ${singerTone}.`:'✓ Hino salvo na biblioteca.');
+  }catch(e){toast(e.message||'Erro ao salvar.',true)}finally{btn.disabled=false}
+}
+function saveToLibrary(){openHarpaSave()}
 window.addEventListener('resize',()=>{if(current&&document.getElementById('presentation').classList.contains('on'))renderInto('pres-cifra',presSize)});
 document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._q);window._q=setTimeout(runSearch,140)});toneOptions();load();
 </script>

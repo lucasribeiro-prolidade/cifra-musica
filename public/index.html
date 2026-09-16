@@ -1271,6 +1271,15 @@ main{max-width:760px}
   #presentation.harpa-mode .lyric-line{line-height:1.62}
 }
 
+
+/* v6.4 — velocidade por barra 1 a 10 */
+.scroll-speed-wrap{flex:1 1 240px;min-width:210px;max-width:420px;display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid #3b342d;border-radius:12px;background:#211d1a}
+.scroll-speed-wrap .edge{font-size:10px;color:#8f8579;font-weight:800;flex:0 0 auto}
+.scroll-speed{flex:1;min-width:110px;accent-color:#f5c842}
+.scroll-speed-value{min-width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#f5c842;color:#17120b;font-size:13px;font-weight:900;flex:0 0 auto}
+.scroll-speed-label{font-size:10px;color:#a99d8c;white-space:nowrap}
+@media(max-width:520px){.pres-controls{gap:7px;padding:8px 9px calc(8px + env(safe-area-inset-bottom))}.scroll-speed-wrap{order:2;flex-basis:100%;max-width:none;min-width:0;padding:8px 9px}.scroll-speed-label{display:none}}
+
 </style>
 </head>
 <body class="auth-pending">
@@ -1811,10 +1820,13 @@ main{max-width:760px}
     <button class="scroll-btn" id="scroll-btn" onclick="toggleScroll()">
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><polygon points="5,3 19,12 5,21"/></svg>Rolar
     </button>
-    <button class="spd-btn active" id="sp-super" onclick="setSpeed('super')">🐌 Muito lenta</button>
-    <button class="spd-btn" id="sp-lenta" onclick="setSpeed('lenta')">Lenta</button>
-    <button class="spd-btn" id="sp-media" onclick="setSpeed('media')">Média</button>
-    <button class="spd-btn" id="sp-rapida" onclick="setSpeed('rapida')">Rápida</button>
+    <div class="scroll-speed-wrap">
+      <span class="edge">1</span>
+      <input id="scroll-speed" class="scroll-speed" type="range" min="1" max="10" step="1" value="5" oninput="setSpeedLevel(this.value)" aria-label="Velocidade da rolagem">
+      <span class="edge">10</span>
+      <span class="scroll-speed-value" id="scroll-speed-value">5</span>
+      <span class="scroll-speed-label">velocidade</span>
+    </div>
     <div class="spacer"></div>
     <button class="btn-sm" onclick="document.getElementById('pres-content').scrollTo({top:0,behavior:'smooth'})">⬆</button>
   </div>
@@ -3797,12 +3809,12 @@ main{max-width:760px}
 // PRESENTATION
 // ══════════════════════════════════════════════════════
 // v6.3 — velocidades pensadas para leitura musical (pixels por segundo)
-const SPDS={super:2.4,lenta:4.2,media:7.2,rapida:12.0};
+const SPEED_LEVELS={1:3.0,2:4.5,3:6.5,4:9.0,5:12.0,6:15.5,7:19.5,8:24.0,9:29.0,10:35.0};
 let scrolling=false,
-    spd=(localStorage.getItem("cifra_scroll_speed")||"super"),
+    speedLevel=parseInt(localStorage.getItem("cifra_scroll_level")||"5",10),
     raf=null,pfz=16,wakeLock=null,keepAwakeTimer=null,audioCtx=null,silentNode=null;
 
-if(!SPDS[spd]) spd="super";
+if(!SPEED_LEVELS[speedLevel]) speedLevel=5;
 
 function openPresentation(){
   const text=txText(cifra,st);
@@ -3849,7 +3861,7 @@ function startScroll(){
 
     if(last!==null){
       const dt=Math.min(80,ts-last); // evita "pulo" se o navegador engasgar
-      logicalTop += SPDS[spd]*(dt/1000);
+      logicalTop += SPEED_LEVELS[speedLevel]*(dt/1000);
 
       const maxTop=Math.max(0,el.scrollHeight-el.clientHeight);
       if(logicalTop>=maxTop){
@@ -3899,15 +3911,16 @@ function updateScrollBtn(){
     :'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><polygon points="5,3 19,12 5,21"/></svg> Rolar';
 }
 
-function setSpeed(s){
-  if(!SPDS[s])return;
-  spd=s;
-  localStorage.setItem("cifra_scroll_speed",s);
-  ["super","lenta","media","rapida"].forEach(k=>{
-    const el=document.getElementById("sp-"+k);
-    if(el)el.classList.toggle("active",k===s);
-  });
+function setSpeedLevel(v){
+  const n=Math.max(1,Math.min(10,parseInt(v,10)||5));
+  speedLevel=n;
+  localStorage.setItem("cifra_scroll_level",String(n));
+  const range=document.getElementById("scroll-speed");
+  const value=document.getElementById("scroll-speed-value");
+  if(range && String(range.value)!==String(n)) range.value=String(n);
+  if(value) value.textContent=String(n);
 }
+function initSpeedControl(){ setSpeedLevel(speedLevel); }
 function presFontSize(d){pfz=Math.min(48,Math.max(8,pfz+d));document.getElementById("pres-display").style.fontSize=pfz+"px";}
 
 // ══════════════════════════════════════════════════════
@@ -3938,7 +3951,7 @@ function toast(msg,err=0){
 // ══════════════════════════════════════════════════════
 updateDot();
 document.getElementById("cifra-editor").style.fontSize=edFs+"px";
-setSpeed(spd);
+initSpeedControl();
 initApp();
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePresentation();closeGroups();closeNewCifraMenu();hideScanStatus();}});
 </script>

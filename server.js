@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
+const mammoth = require('mammoth');
 
 const PORT = Number(process.env.PORT || 3000);
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -56,7 +57,13 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
-app.use(express.json({ limit: '22mb' }));
+app.use(express.json({ limit: '40mb' }));
+app.use((err, req, res, next) => {
+  if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+    return res.status(413).json({ error: 'Arquivo excedeu o limite de envio do servidor.' });
+  }
+  next(err);
+});
 
 app.use(session({
   store: new pgSession({
@@ -1165,29 +1172,68 @@ app.post('/api/ai/organize', requireAuth, aiLimiter, async (req, res) => {
 app.post('/api/ai/read-document', requireAuth, aiLimiter, async (req, res) => {
   try {
     const base64 = String(req.body?.base64 || '');
-    const mediaType = cleanString(req.body?.mediaType || 'application/pdf', 100);
+    const mediaType = cleanString(req.body?.mediaType || 'application/pdf', 150);
     const filename = cleanString(req.body?.filename || '', 300);
 
-    if (!base64 || base64.length > 28_000_000) {
-      return res.status(400).json({ error: 'Arquivo ausente ou muito grande.' });
+    if (!base64) {
+      return res.status(400).json({ error: 'Arquivo ausente.' });
+    }
+    // ~25 MB de arquivo binário depois da conversão para base64.
+    if (base64.length > 35_000_000) {
+      return res.status(413).json({ error: 'Arquivo muito grande. Use um PDF de até 25 MB.' });
     }
 
     const isImage = /^image\/(jpeg|png|webp|gif)$/i.test(mediaType);
     const isPdf = mediaType === 'application/pdf';
+    const isDocx = mediaType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-    if (!isImage && !isPdf) {
-      return res.status(400).json({ error: 'Formato não suportado para leitura visual.' });
+    if (!isImage && !isPdf && !isDocx) {
+      return res.status(400).json({ error: 'Formato não suportado. Use PDF, Word (.docx) ou imagem.' });
+    }
+
+    // WORD: extrai o texto no próprio servidor. Não depende mais de CDN no celular.
+    if (isDocx) {
+      const buffer = Buffer.from(base64, 'base64');
+      if (!buffer.length) return res.status(400).json({ error: 'Word vazio ou inválido.' });
+
+      const result = await mammoth.extractRawText({ buffer });
+      const raw = String(result?.value || '').trim();
+      if (!raw) return res.status(400).json({ error: 'Não consegui encontrar texto neste Word.' });
+      if (raw.length > 120_000) return res.status(400).json({ error: 'O Word tem texto demais. Envie apenas a cifra desejada.' });
+
+      const prompt = `Organize a cifra musical extraída deste arquivo Word (${filename || 'arquivo.docx'}).
+
+REGRAS ABSOLUTAS:
+- Preserve letra e acordes presentes no arquivo.
+- NÃO invente acordes.
+- Quando houver linhas de acordes separadas, mantenha os espaços para deixar cada acorde sobre a palavra/sílaba correspondente.
+- Preserve estrofes, refrões e quebras de linha.
+- Remova cabeçalhos, rodapés, números de página e textos que não pertençam à música.
+- Se houver título, artista ou tom, extraia-os.
+
+RETORNE SOMENTE neste formato:
+TITULO: [nome, se identificado]
+ARTISTA: [artista, se identificado]
+TOM: [tom, se identificado]
+
+[cifra limpa e organizada]
+
+CONTEÚDO DO WORD:
+${raw}`;
+
+      const data = await callAnthropic({
+        model: AI_MODEL,
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      const text = anthropicText(data);
+      if (!text) throw new Error('A IA não conseguiu organizar o Word.');
+      return res.json({ text });
     }
 
     const visualBlock = isImage
-      ? {
-          type: 'image',
-          source: { type: 'base64', media_type: mediaType, data: base64 }
-        }
-      : {
-          type: 'document',
-          source: { type: 'base64', media_type: mediaType, data: base64 }
-        };
+      ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } }
+      : { type: 'document', source: { type: 'base64', media_type: mediaType, data: base64 } };
 
     const instruction = isImage
       ? `Leia esta fotografia de uma cifra musical (${filename || 'imagem'}).
@@ -1204,7 +1250,7 @@ REGRAS ABSOLUTAS:
 - Se um acorde estiver acima de uma palavra, preserve esse posicionamento usando espaços.
 - Preserve estrofes, refrões e quebras de linha quando forem identificáveis.
 - Ignore partitura, números de página, cabeçalhos, rodapés, propagandas e elementos que não pertençam à cifra.
-- Se alguma parte estiver ilegível, não adivinhe silenciosamente: use [?] no trecho duvidoso.
+- Se alguma parte estiver ilegível, use [?] no trecho duvidoso.
 - Se houver título, artista ou tom visível, extraia-os.
 
 RETORNE SOMENTE neste formato:
@@ -1215,12 +1261,14 @@ TOM: [tom, se identificado]
 [cifra em texto monoespaçado, mantendo cada acorde na coluna correta acima da letra]`
       : `Extraia e organize a cifra deste PDF (${filename || 'arquivo'}).
 
-REGRAS:
-- Preserve exatamente o alinhamento e os nomes dos acordes.
-- Não mova os acordes para o começo das linhas.
+REGRAS ABSOLUTAS:
+- Preserve exatamente os nomes dos acordes existentes.
+- NÃO invente acordes.
 - Mantenha cada acorde acima da palavra/sílaba correspondente.
-- Remova cabeçalhos, rodapés e textos que não fazem parte da cifra.
-- Não invente conteúdo ilegível.
+- Preserve os espaços necessários entre acordes e letra.
+- Preserve estrofes, refrões e quebras de linha.
+- Remova cabeçalhos, rodapés, propagandas e textos que não façam parte da cifra.
+- Se alguma parte estiver ilegível, use [?] em vez de adivinhar.
 - Se houver título, artista ou tom, use:
 TITULO: ...
 ARTISTA: ...
@@ -1233,10 +1281,7 @@ Depois retorne a cifra limpa e organizada.`;
       max_tokens: 8000,
       messages: [{
         role: 'user',
-        content: [
-          visualBlock,
-          { type: 'text', text: instruction }
-        ]
+        content: [visualBlock, { type: 'text', text: instruction }]
       }]
     });
 

@@ -1,0 +1,24 @@
+CIFRA-MUSICA v6.5 — CORREÇÃO DE IMPORTAÇÃO PDF / WORD
+
+SUBSTITUIR NO GITHUB:
+1. public/index.html
+2. server.js
+3. package.json
+
+Depois aguarde o Railway concluir o novo deploy.
+
+CORREÇÕES:
+- Android abre o seletor de PDF/Word com tipos MIME completos;
+- o clique no seletor ocorre antes de fechar o modal (mantém o gesto do usuário);
+- PDF: limite do servidor aumentado e erro 413 tratado;
+- Word .docx: não depende mais de biblioteca externa/CDN no celular;
+- Word é extraído no servidor com Mammoth;
+- progresso visível durante envio e leitura;
+- mensagens claras para arquivo grande, formato inválido ou falha de conexão.
+
+LIMITES DE TELA:
+- PDF: até 25 MB
+- Word .docx: até 15 MB
+- TXT: até 5 MB
+
+Não mexer no banco, harpa.json ou harpa.html.

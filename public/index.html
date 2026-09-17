@@ -1631,8 +1631,8 @@ main{max-width:760px}
     </div>
     <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleImageFile(event,'camera')">
     <input type="file" id="gallery-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="handleImageFile(event,'gallery')">
-    <input type="file" id="file-input" accept=".pdf,.docx,.txt" style="display:none" onchange="handleFile(event)">
-    <div class="capture-help">A IA lê a foto ou o arquivo e organiza letra + acordes. Depois você confere antes de salvar.</div>
+    <input type="file" id="file-input" accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,.txt" style="display:none" onchange="handleFile(event)">
+    <div class="capture-help">PDF, Word (.docx), TXT ou foto. O sistema envia, organiza letra + acordes e abre para conferência.<br><b>Limites:</b> PDF 25 MB · Word 15 MB.</div>
 
     <div class="divider"><div class="divider-line"></div><span>ou cole o texto</span><div class="divider-line"></div></div>
 
@@ -2848,16 +2848,22 @@ function closeNewCifraMenu(){
   if(el)el.classList.remove("open");
 }
 function chooseCamera(){
+  const input=document.getElementById("camera-input");
+  input.value="";
+  input.click();
   closeNewCifraMenu();
-  document.getElementById("camera-input").click();
 }
 function chooseGallery(){
+  const input=document.getElementById("gallery-input");
+  input.value="";
+  input.click();
   closeNewCifraMenu();
-  document.getElementById("gallery-input").click();
 }
 function chooseDocument(){
+  const input=document.getElementById("file-input");
+  input.value="";
+  input.click();
   closeNewCifraMenu();
-  document.getElementById("file-input").click();
 }
 function newCifraPaste(){
   closeNewCifraMenu();
@@ -2969,41 +2975,79 @@ async function handleImageFile(event,source){
 // FILE IMPORT (PDF / DOCX / TXT)
 // ══════════════════════════════════════════════════════
 async function handleFile(event){
-  const file=event.target.files[0];
+  const input=event.target;
+  const file=input.files?.[0];
+  input.value="";
   if(!file)return;
-  event.target.value="";
-  const ext=file.name.split(".").pop().toLowerCase();
-  if(!aiConfigured&&ext!=="txt"){toast("A IA ainda não foi configurada no servidor.",1);openApiModal();return;}
+
+  const ext=(file.name.split(".").pop()||"").toLowerCase();
+  const isPdf=ext==="pdf" || file.type==="application/pdf";
+  const isDocx=ext==="docx" || file.type==="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const isTxt=ext==="txt" || file.type==="text/plain";
+
+  if(!isPdf&&!isDocx&&!isTxt){
+    toast("Use PDF, Word (.docx) ou TXT.",1);
+    return;
+  }
+
+  if(!aiConfigured&&!isTxt){
+    toast("A IA ainda não foi configurada no servidor.",1);
+    openApiModal();
+    return;
+  }
+
+  // Limites claros antes de tentar enviar. Base64 aumenta o tamanho em ~33%.
+  const limit=isPdf ? 25*1024*1024 : isDocx ? 15*1024*1024 : 5*1024*1024;
+  if(file.size>limit){
+    const mb=Math.round(limit/1024/1024);
+    toast(`Arquivo muito grande. Para ${isPdf?'PDF':isDocx?'Word':'TXT'}, use até ${mb} MB.`,1);
+    return;
+  }
 
   const btn=document.getElementById("ai-btn");
-  btn.textContent="⏳ Lendo arquivo...";
   btn.disabled=true;
 
   try{
-    if(ext==="txt"){
+    if(isTxt){
+      showScanStatus("Lendo o arquivo...","Abrindo o texto e preparando a cifra.");
       const text=await file.text();
+      if(!text.trim())throw new Error("O arquivo TXT está vazio.");
+      showScanStatus("Organizando a cifra...","A IA está separando letra e acordes.");
       await aiOrganizeText(text,file.name);
-
-    } else if(ext==="pdf"){
-      toast("📄 Enviando PDF para IA...");
-      const base64=await toBase64(file);
-      const txt=await readWithClaude(base64,"application/pdf",file.name);
-      setCifraAndPreview(txt,file.name);
-
-    } else if(ext==="docx"){
-      toast("📝 Lendo Word...");
-      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
-      const ab=await file.arrayBuffer();
-      const result=await window.mammoth.extractRawText({arrayBuffer:ab});
-      if(!result.value.trim()){toast("Não consegui ler o Word.",1);return;}
-      await aiOrganizeText(result.value,file.name);
-
-    } else {
-      toast("Use PDF, Word ou TXT.",1);
+      return;
     }
+
+    showScanStatus(
+      isPdf?"Enviando o PDF...":"Enviando o Word...",
+      "Aguarde. O arquivo está sendo enviado com segurança para o servidor."
+    );
+
+    const base64=await toBase64(file);
+    const mediaType=isPdf
+      ? "application/pdf"
+      : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    showScanStatus(
+      isPdf?"Lendo o PDF...":"Lendo o Word...",
+      "A IA está identificando a letra e os acordes."
+    );
+
+    const txt=await readWithClaude(base64,mediaType,file.name);
+    if(!txt.trim())throw new Error("O arquivo foi enviado, mas não encontrei conteúdo para montar a cifra.");
+
+    showScanStatus("Montando a cifra...","Quase pronto. Preparando a tela para conferência.");
+    setCifraAndPreview(txt,file.name);
   }catch(e){
-    toast("Erro: "+e.message,1);
+    let msg=e?.message||"Não foi possível importar o arquivo.";
+    if(/413|too large|entity too large|request entity/i.test(msg)){
+      msg="O arquivo passou do limite de envio. Tente um PDF menor ou divida o arquivo.";
+    }
+    if(/network|failed to fetch|load failed/i.test(msg)){
+      msg="Falha de conexão durante o envio. Confira a internet e tente novamente.";
+    }
+    toast("Erro ao importar: "+msg,1);
   }finally{
+    hideScanStatus();
     btn.innerHTML="✨ IA Organizar";
     btn.disabled=false;
   }

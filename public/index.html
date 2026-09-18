@@ -1167,13 +1167,13 @@ main{max-width:760px}
   line-height:1.45
 }
 
-/* tela enquanto a IA lê a fotografia */
+/* v6.6 — progresso visível ao importar foto / PDF / Word */
 .scan-overlay{
   position:fixed;
   inset:0;
   z-index:9200;
-  background:rgba(16,14,12,.92);
-  backdrop-filter:blur(8px);
+  background:rgba(12,11,10,.94);
+  backdrop-filter:blur(9px);
   display:none;
   align-items:center;
   justify-content:center;
@@ -1182,29 +1182,59 @@ main{max-width:760px}
 .scan-overlay.on{display:flex}
 .scan-card{
   width:100%;
-  max-width:360px;
-  text-align:center;
-  background:linear-gradient(180deg,#2d2722,#1d1a18);
-  border:1px solid #473d34;
-  border-radius:20px;
-  padding:24px 20px;
-  box-shadow:0 22px 70px rgba(0,0,0,.45)
+  max-width:390px;
+  text-align:left;
+  background:linear-gradient(180deg,#302923,#1d1a18);
+  border:1px solid #4b4036;
+  border-radius:22px;
+  padding:20px;
+  box-shadow:0 24px 80px rgba(0,0,0,.5)
 }
+.scan-top{display:flex;align-items:center;gap:12px;margin-bottom:15px}
 .scan-icon{
-  width:68px;height:68px;border-radius:20px;
-  margin:0 auto 14px;
+  width:58px;height:58px;border-radius:17px;
   display:flex;align-items:center;justify-content:center;
-  font-size:34px;
+  font-size:29px;flex:0 0 auto;
   background:#443315;border:1px solid #6d511a
 }
-.scan-spinner{
-  width:30px;height:30px;border-radius:50%;
-  border:3px solid #4a4139;border-top-color:#f5c842;
-  margin:0 auto 14px;animation:spin .8s linear infinite
+.scan-head{flex:1;min-width:0}
+.scan-card h3{margin:0 0 4px;color:#f3eadb;font-size:17px}
+.scan-card p{margin:0;color:#aa9f90;font-size:11.5px;line-height:1.45}
+.scan-file{
+  margin:0 0 13px;padding:9px 11px;border-radius:11px;
+  background:#1b1917;border:1px solid #37312b;
+  color:#cabdab;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
-.scan-card h3{margin:0 0 6px;color:#f3eadb;font-size:17px}
-.scan-card p{margin:0;color:#a99d8c;font-size:12px;line-height:1.5}
-.scan-card small{display:block;color:#71685f;font-size:10px;margin-top:12px}
+.scan-step-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.scan-step{color:#f0d277;font-size:11px;font-weight:800}
+.scan-percent{color:#e8dfd2;font-size:12px;font-weight:900;min-width:48px;text-align:right}
+.scan-progress{
+  height:10px;border-radius:999px;overflow:hidden;
+  background:#151311;border:1px solid #37312b;position:relative
+}
+.scan-progress-fill{
+  height:100%;width:0%;border-radius:999px;
+  background:linear-gradient(90deg,#d9991d,#f5c842);
+  transition:width .18s ease
+}
+.scan-progress.indeterminate .scan-progress-fill{
+  width:38%!important;position:absolute;left:-42%;
+  animation:scanSlide 1.15s ease-in-out infinite
+}
+@keyframes scanSlide{0%{left:-42%}100%{left:105%}}
+.scan-hint{display:block;color:#746b62;font-size:9.8px;margin-top:9px;line-height:1.4}
+.scan-actions{display:none;margin-top:14px}
+.scan-card.error{border-color:#74403d}
+.scan-card.error .scan-icon{background:#401f1d;border-color:#74403d}
+.scan-card.error .scan-step{color:#ff9d94}
+.scan-card.error .scan-progress-fill{background:#db5b52}
+.scan-card.success .scan-icon{background:#193a25;border-color:#2c7043}
+.scan-card.success .scan-progress-fill{background:linear-gradient(90deg,#4aa76c,#78d998)}
+@media(max-width:420px){
+  .scan-overlay{padding:14px}
+  .scan-card{padding:17px;border-radius:19px}
+  .scan-icon{width:52px;height:52px;font-size:26px}
+}
 
 @media(max-width:620px){
   .new-cifra-overlay{padding:0;align-items:flex-end}
@@ -1513,12 +1543,26 @@ main{max-width:760px}
 </div>
 
 <div class="scan-overlay" id="scan-overlay">
-  <div class="scan-card">
-    <div class="scan-icon">📷</div>
-    <div class="scan-spinner"></div>
-    <h3 id="scan-title">Lendo sua cifra...</h3>
-    <p id="scan-text">A IA está identificando a letra e a posição dos acordes.</p>
-    <small>Fotos nítidas, retas e com boa iluminação dão melhores resultados.</small>
+  <div class="scan-card" id="scan-card">
+    <div class="scan-top">
+      <div class="scan-icon" id="scan-icon">📄</div>
+      <div class="scan-head">
+        <h3 id="scan-title">Importando cifra...</h3>
+        <p id="scan-text">Preparando o arquivo.</p>
+      </div>
+    </div>
+    <div class="scan-file" id="scan-file">arquivo</div>
+    <div class="scan-step-row">
+      <span class="scan-step" id="scan-step">Etapa 1 de 4</span>
+      <span class="scan-percent" id="scan-percent">0%</span>
+    </div>
+    <div class="scan-progress" id="scan-progress">
+      <div class="scan-progress-fill" id="scan-progress-fill"></div>
+    </div>
+    <small class="scan-hint" id="scan-hint">Pode levar alguns segundos. Não feche esta tela durante a importação.</small>
+    <div class="scan-actions" id="scan-actions">
+      <button class="btn btn-dark" style="width:100%" onclick="hideScanStatus()">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -2871,16 +2915,87 @@ function newCifraPaste(){
   setTimeout(()=>document.getElementById("raw-input")?.focus(),100);
 }
 
-function showScanStatus(title,text){
+function scanIconFor(filename,type){
+  const name=(filename||"").toLowerCase();
+  if((type||"").startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(name))return "📷";
+  if((type||"").includes("pdf") || /\.pdf$/i.test(name))return "📕";
+  if(/\.docx?$/i.test(name) || (type||"").includes("word"))return "📘";
+  if(/\.txt$/i.test(name) || (type||"").includes("text"))return "📝";
+  return "📄";
+}
+function setScanProgress(value,indeterminate=false){
+  const track=document.getElementById("scan-progress");
+  const fill=document.getElementById("scan-progress-fill");
+  const pct=document.getElementById("scan-percent");
+  if(!track||!fill||!pct)return;
+  track.classList.toggle("indeterminate",!!indeterminate);
+  if(indeterminate){
+    pct.textContent="Processando…";
+  }else{
+    const n=Math.max(0,Math.min(100,Math.round(Number(value)||0)));
+    fill.style.width=n+"%";
+    pct.textContent=n+"%";
+  }
+}
+function showScanStatus(title,text,opts={}){
   const o=document.getElementById("scan-overlay");
   if(!o)return;
-  document.getElementById("scan-title").textContent=title||"Lendo sua cifra...";
-  document.getElementById("scan-text").textContent=text||"A IA está identificando a letra e os acordes.";
+  const card=document.getElementById("scan-card");
+  card?.classList.remove("error","success");
+  document.getElementById("scan-title").textContent=title||"Importando cifra...";
+  document.getElementById("scan-text").textContent=text||"Preparando o arquivo.";
+  document.getElementById("scan-file").textContent=opts.filename||"Arquivo selecionado";
+  document.getElementById("scan-icon").textContent=opts.icon||scanIconFor(opts.filename,opts.mediaType);
+  document.getElementById("scan-step").textContent=opts.step||"Etapa 1 de 4";
+  document.getElementById("scan-hint").textContent=opts.hint||"Pode levar alguns segundos. Não feche esta tela durante a importação.";
+  document.getElementById("scan-actions").style.display="none";
+  setScanProgress(opts.progress??0,!!opts.indeterminate);
   o.classList.add("on");
 }
-function hideScanStatus(){
-  document.getElementById("scan-overlay")?.classList.remove("on");
+function updateScanStatus(title,text,opts={}){
+  const o=document.getElementById("scan-overlay");
+  if(!o?.classList.contains("on"))showScanStatus(title,text,opts);
+  if(title)document.getElementById("scan-title").textContent=title;
+  if(text)document.getElementById("scan-text").textContent=text;
+  if(opts.filename)document.getElementById("scan-file").textContent=opts.filename;
+  if(opts.icon)document.getElementById("scan-icon").textContent=opts.icon;
+  if(opts.step)document.getElementById("scan-step").textContent=opts.step;
+  if(opts.hint)document.getElementById("scan-hint").textContent=opts.hint;
+  if(Object.prototype.hasOwnProperty.call(opts,"progress")||opts.indeterminate){
+    setScanProgress(opts.progress??0,!!opts.indeterminate);
+  }
 }
+function showScanSuccess(filename){
+  const card=document.getElementById("scan-card");
+  card?.classList.add("success");
+  card?.classList.remove("error");
+  updateScanStatus("Cifra pronta!","Abrindo para você conferir.",{
+    filename:filename||"Arquivo importado",step:"Etapa 4 de 4",progress:100,
+    hint:"Confira a letra e os acordes antes de salvar."
+  });
+  document.getElementById("scan-icon").textContent="✅";
+}
+function showScanError(message,filename){
+  const card=document.getElementById("scan-card");
+  card?.classList.add("error");
+  card?.classList.remove("success");
+  document.getElementById("scan-title").textContent="Não consegui importar";
+  document.getElementById("scan-text").textContent=message||"Ocorreu um erro durante a importação.";
+  if(filename)document.getElementById("scan-file").textContent=filename;
+  document.getElementById("scan-icon").textContent="⚠️";
+  document.getElementById("scan-step").textContent="Importação interrompida";
+  document.getElementById("scan-hint").textContent="Feche esta mensagem e tente novamente. O arquivo anterior não foi alterado.";
+  setScanProgress(100,false);
+  document.getElementById("scan-actions").style.display="block";
+  document.getElementById("scan-overlay")?.classList.add("on");
+}
+function hideScanStatus(){
+  const o=document.getElementById("scan-overlay");
+  o?.classList.remove("on");
+  const track=document.getElementById("scan-progress");
+  track?.classList.remove("indeterminate");
+}
+function waitMs(ms){return new Promise(r=>setTimeout(r,ms));}
 
 function loadImageElement(file){
   return new Promise((resolve,reject)=>{
@@ -2938,36 +3053,53 @@ async function handleImageFile(event,source){
     return;
   }
 
-  // Começa uma cifra nova para não misturar com a anterior.
   newCifra();
-
+  let completed=false;
   try{
     showScanStatus(
       source==="camera"?"Preparando a foto...":"Preparando a imagem...",
-      "Ajustando o tamanho para manter a leitura nítida e rápida."
+      "Ajustando a imagem para manter a leitura nítida.",
+      {filename:file.name||"foto-cifra.jpg",mediaType:file.type,step:"Etapa 1 de 4",progress:5}
     );
 
     const prepared=await prepareImageForAI(file);
+    updateScanStatus("Preparando a imagem...","Convertendo a foto para envio.",{
+      filename:file.name||"foto-cifra.jpg",step:"Etapa 1 de 4",progress:15
+    });
 
-    showScanStatus(
-      "Lendo letra e acordes...",
-      "A IA está organizando a cifra e preservando o ponto de entrada de cada acorde."
-    );
+    const base64=await toBase64(prepared.blob,p=>{
+      updateScanStatus("Preparando a imagem...","Lendo a foto no aparelho.",{
+        filename:file.name||"foto-cifra.jpg",step:"Etapa 1 de 4",progress:15+(p*10)
+      });
+    });
 
-    const base64=await toBase64(prepared.blob);
-    const txt=await readWithClaude(base64,prepared.mediaType,file.name||"foto-cifra.jpg");
+    updateScanStatus("Enviando a foto...","Enviando com segurança para o servidor.",{
+      filename:file.name||"foto-cifra.jpg",step:"Etapa 2 de 4",progress:25
+    });
 
-    showScanStatus(
-      "Montando a cifra...",
-      "Quase pronto. Preparando a tela para você conferir."
-    );
+    const txt=await readWithClaude(base64,prepared.mediaType,file.name||"foto-cifra.jpg",{
+      onUpload:p=>updateScanStatus("Enviando a foto...","Enviando com segurança para o servidor.",{
+        filename:file.name||"foto-cifra.jpg",step:"Etapa 2 de 4",progress:25+(p*40)
+      }),
+      onProcessing:()=>updateScanStatus("IA lendo a cifra...","Identificando letra, acordes e posição de entrada.",{
+        filename:file.name||"foto-cifra.jpg",step:"Etapa 3 de 4",indeterminate:true,
+        hint:"O envio terminou. Agora a IA está processando a cifra; esta etapa pode levar alguns segundos."
+      })
+    });
+    if(!txt.trim())throw new Error("A imagem foi enviada, mas não encontrei conteúdo para montar a cifra.");
 
+    updateScanStatus("Montando a cifra...","Preparando a tela para conferência.",{
+      filename:file.name||"foto-cifra.jpg",step:"Etapa 4 de 4",progress:94
+    });
     setCifraAndPreview(txt,file.name||"Foto da cifra");
+    showScanSuccess(file.name||"Foto da cifra");
+    completed=true;
+    await waitMs(450);
+    hideScanStatus();
     toast("✓ Foto convertida. Confira a cifra antes de salvar.");
   }catch(e){
-    toast("Erro na foto: "+(e.message||"não foi possível ler a cifra."),1);
-  }finally{
-    hideScanStatus();
+    showScanError(e?.message||"Não foi possível ler a cifra.",file.name||"Foto da cifra");
+    toast("Erro ao importar a foto.",1);
   }
 }
 
@@ -2986,7 +3118,10 @@ async function handleFile(event){
   const isTxt=ext==="txt" || file.type==="text/plain";
 
   if(!isPdf&&!isDocx&&!isTxt){
-    toast("Use PDF, Word (.docx) ou TXT.",1);
+    showScanStatus("Arquivo não suportado","Escolha um PDF, Word (.docx) ou TXT.",{
+      filename:file.name,mediaType:file.type,step:"Arquivo não aceito",progress:0
+    });
+    showScanError("Use PDF, Word (.docx) ou TXT.",file.name);
     return;
   }
 
@@ -2996,68 +3131,96 @@ async function handleFile(event){
     return;
   }
 
-  // Limites claros antes de tentar enviar. Base64 aumenta o tamanho em ~33%.
   const limit=isPdf ? 25*1024*1024 : isDocx ? 15*1024*1024 : 5*1024*1024;
   if(file.size>limit){
     const mb=Math.round(limit/1024/1024);
-    toast(`Arquivo muito grande. Para ${isPdf?'PDF':isDocx?'Word':'TXT'}, use até ${mb} MB.`,1);
+    showScanStatus("Arquivo muito grande",`Para ${isPdf?'PDF':isDocx?'Word':'TXT'}, use até ${mb} MB.`,{
+      filename:file.name,mediaType:file.type,step:"Arquivo não enviado",progress:0
+    });
+    showScanError(`Este arquivo passou do limite de ${mb} MB.`,file.name);
     return;
   }
 
   const btn=document.getElementById("ai-btn");
   btn.disabled=true;
+  newCifra();
 
   try{
+    const icon=scanIconFor(file.name,file.type);
+    showScanStatus("Preparando o arquivo...","Abrindo o arquivo no aparelho.",{
+      filename:file.name,icon,step:"Etapa 1 de 4",progress:5
+    });
+
     if(isTxt){
-      showScanStatus("Lendo o arquivo...","Abrindo o texto e preparando a cifra.");
       const text=await file.text();
       if(!text.trim())throw new Error("O arquivo TXT está vazio.");
-      showScanStatus("Organizando a cifra...","A IA está separando letra e acordes.");
+      updateScanStatus("IA organizando o texto...","Separando letra e acordes.",{
+        filename:file.name,icon,step:"Etapa 3 de 4",indeterminate:true,
+        hint:"O arquivo já foi lido. Agora a IA está organizando a cifra."
+      });
       await aiOrganizeText(text,file.name);
+      showScanSuccess(file.name);
+      await waitMs(450);
+      hideScanStatus();
       return;
     }
 
-    showScanStatus(
-      isPdf?"Enviando o PDF...":"Enviando o Word...",
-      "Aguarde. O arquivo está sendo enviado com segurança para o servidor."
-    );
+    const base64=await toBase64(file,p=>{
+      updateScanStatus("Preparando o arquivo...","Lendo o arquivo no aparelho.",{
+        filename:file.name,icon,step:"Etapa 1 de 4",progress:5+(p*20)
+      });
+    });
 
-    const base64=await toBase64(file);
     const mediaType=isPdf
       ? "application/pdf"
       : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    showScanStatus(
-      isPdf?"Lendo o PDF...":"Lendo o Word...",
-      "A IA está identificando a letra e os acordes."
-    );
+    updateScanStatus(isPdf?"Enviando o PDF...":"Enviando o Word...","Enviando com segurança para o servidor.",{
+      filename:file.name,icon,step:"Etapa 2 de 4",progress:25
+    });
 
-    const txt=await readWithClaude(base64,mediaType,file.name);
+    const txt=await readWithClaude(base64,mediaType,file.name,{
+      onUpload:p=>updateScanStatus(isPdf?"Enviando o PDF...":"Enviando o Word...","Enviando com segurança para o servidor.",{
+        filename:file.name,icon,step:"Etapa 2 de 4",progress:25+(p*40)
+      }),
+      onProcessing:()=>updateScanStatus(isPdf?"IA lendo o PDF...":"IA lendo o Word...","Identificando letra, acordes e estrutura da música.",{
+        filename:file.name,icon,step:"Etapa 3 de 4",indeterminate:true,
+        hint:"O envio terminou. Agora a IA está processando o conteúdo; não feche esta tela."
+      })
+    });
     if(!txt.trim())throw new Error("O arquivo foi enviado, mas não encontrei conteúdo para montar a cifra.");
 
-    showScanStatus("Montando a cifra...","Quase pronto. Preparando a tela para conferência.");
+    updateScanStatus("Montando a cifra...","Preparando a tela para conferência.",{
+      filename:file.name,icon,step:"Etapa 4 de 4",progress:94
+    });
     setCifraAndPreview(txt,file.name);
+    showScanSuccess(file.name);
+    await waitMs(450);
+    hideScanStatus();
   }catch(e){
     let msg=e?.message||"Não foi possível importar o arquivo.";
     if(/413|too large|entity too large|request entity/i.test(msg)){
-      msg="O arquivo passou do limite de envio. Tente um PDF menor ou divida o arquivo.";
+      msg="O arquivo passou do limite de envio. Tente um arquivo menor ou divida o PDF.";
     }
-    if(/network|failed to fetch|load failed/i.test(msg)){
+    if(/network|failed to fetch|load failed|falha de conexão/i.test(msg)){
       msg="Falha de conexão durante o envio. Confira a internet e tente novamente.";
     }
-    toast("Erro ao importar: "+msg,1);
+    showScanError(msg,file.name);
+    toast("Erro ao importar o arquivo.",1);
   }finally{
-    hideScanStatus();
     btn.innerHTML="✨ IA Organizar";
     btn.disabled=false;
   }
 }
 
-function toBase64(file){
+function toBase64(file,onProgress){
   return new Promise((res,rej)=>{
     const r=new FileReader();
-    r.onload=()=>res(r.result.split(",")[1]);
-    r.onerror=rej;
+    r.onprogress=e=>{
+      if(e.lengthComputable&&typeof onProgress==="function")onProgress(e.loaded/e.total);
+    };
+    r.onload=()=>{if(typeof onProgress==="function")onProgress(1);res(r.result.split(",")[1]);};
+    r.onerror=()=>rej(new Error("Não consegui ler o arquivo no aparelho."));
     r.readAsDataURL(file);
   });
 }
@@ -3071,10 +3234,31 @@ function loadScript(src){
   });
 }
 
-async function readWithClaude(base64,mediaType,filename){
-  if(!aiConfigured)throw new Error("A IA ainda não foi configurada no servidor.");
-  const data=await apiFetch("/api/ai/read-document",{method:"POST",body:JSON.stringify({base64,mediaType,filename})});
-  return (data.text||"").trim();
+function readWithClaude(base64,mediaType,filename,hooks={}){
+  if(!aiConfigured)return Promise.reject(new Error("A IA ainda não foi configurada no servidor."));
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open("POST","/api/ai/read-document",true);
+    xhr.setRequestHeader("Content-Type","application/json");
+    xhr.withCredentials=true;
+    xhr.upload.onprogress=e=>{
+      if(e.lengthComputable&&typeof hooks.onUpload==="function")hooks.onUpload(e.loaded/e.total);
+    };
+    xhr.upload.onload=()=>{
+      if(typeof hooks.onProcessing==="function")hooks.onProcessing();
+    };
+    xhr.onerror=()=>reject(new Error("Falha de conexão durante o envio."));
+    xhr.onabort=()=>reject(new Error("Envio cancelado."));
+    xhr.onload=()=>{
+      let data={};
+      try{data=JSON.parse(xhr.responseText||"{}");}catch{}
+      if(xhr.status<200||xhr.status>=300){
+        const err=new Error(data.error||("Erro "+xhr.status));err.status=xhr.status;reject(err);return;
+      }
+      resolve((data.text||"").trim());
+    };
+    xhr.send(JSON.stringify({base64,mediaType,filename}));
+  });
 }
 
 function setCifraAndPreview(txt,filename){

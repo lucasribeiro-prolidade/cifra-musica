@@ -2068,7 +2068,7 @@ function cleanCifra(text){
 // ══════════════════════════════════════════════════════
 // STATE / AUTH / NUVEM (RAILWAY + POSTGRESQL)
 // ══════════════════════════════════════════════════════
-let cifra="",st=0,edFs=14,library=[],lastResult="",lastSearchResult=null,currentCifraId=null,migrationBusy=false;
+let cifra="",st=0,baseTone="",searchSource=null,edFs=14,library=[],lastResult="",lastSearchResult=null,currentCifraId=null,migrationBusy=false;
 const LKEY="cifras_igreja_v1";
 let currentUser=null,authMode="login",aiConfigured=false;
 let singers=[],currentSingerTones=[];
@@ -2234,8 +2234,29 @@ async function deleteSinger(id){
 function toneOptions(selected=""){
   return '<option value="">Tom...</option>'+TONES.map(t=>`<option value="${t}" ${t===selected?'selected':''}>${t}</option>`).join("");
 }
+function normalizeToneValue(value){
+  let v=String(value||"").trim();
+  if(!v)return "";
+  const pt={"dó":"C","do":"C","ré":"D","re":"D","mi":"E","fá":"F","fa":"F","sol":"G","lá":"A","la":"A","si":"B"};
+  const low=v.toLowerCase();
+  for(const [name,note] of Object.entries(pt)){
+    if(low===name || low.startsWith(name+" ") || low.startsWith(name+" maior") || low.startsWith(name+" menor")){
+      if(/bemol|♭/.test(low))return note==="C"?"B":note==="D"?"Db":note==="E"?"Eb":note==="F"?"E":note==="G"?"Gb":note==="A"?"Ab":"Bb";
+      if(/sustenido|#|♯/.test(low))return note+"#";
+      return note;
+    }
+  }
+  const m=v.match(/([A-G](?:#|b)?)/i);
+  if(!m)return "";
+  const n=m[1][0].toUpperCase()+m[1].slice(1);
+  return NMAP[n]!==undefined?n:"";
+}
+function currentBaseTone(){
+  const b=normalizeToneValue(baseTone);
+  return b || detectKey(cifra) || "";
+}
 function currentDisplayedTone(){
-  const k=detectKey(cifra);return k?TONES[((NMAP[k]+st)%12+12)%12]:"";
+  const k=currentBaseTone();return k?TONES[((NMAP[k]+st)%12+12)%12]:"";
 }
 function isCurrentReadOnly(){return Boolean(currentSharedContext && !currentSharedContext.can_edit);}
 function setCurrentEditAccess(canEdit=true){
@@ -2293,7 +2314,7 @@ function setSingerTone(index,tone){if(isCurrentReadOnly())return;if(!currentSing
 function removeSingerFromSong(index){if(isCurrentReadOnly())return;currentSingerTones.splice(index,1);renderSingerAssignments();}
 function useSingerTone(tone){
   if(!tone){toast("Defina o tom deste cantor primeiro.",1);return;}
-  const k=detectKey(cifra);if(!k){toast("Nenhum acorde detectado na cifra.",1);return;}
+  const k=currentBaseTone();if(!k){toast("Tom base não identificado nesta cifra.",1);return;}
   st=((NMAP[tone]-NMAP[k])%12+12)%12;refreshPreview();toast("🎤 Cifra ajustada para o tom "+tone);
 }
 
@@ -2679,7 +2700,7 @@ async function addLibraryCifraToRepertoire(){
 function newSongForRepertoire(){
   const r=groupView.repertoire;if(!r?.can_write)return;
   pendingShareRepertoireId=r.id;currentSharedContext=null;closeGroups();
-  cifra="";st=0;currentCifraId=null;currentSingerTones=[];
+  cifra="";st=0;baseTone="";searchSource=null;currentCifraId=null;currentSingerTones=[];
   ["raw-input","cifra-editor","song-title"].forEach(id=>document.getElementById(id).value="");
   setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();switchTab("editor");
   toast("Crie a música e clique em Salvar. Ela entrará nesta pasta compartilhada.");
@@ -2696,7 +2717,7 @@ function openSharedSong(id){
   const r=groupView.repertoire,x=(groupView.sharedItems||[]).find(a=>a.id===id);if(!x||!r)return;
   currentCifraId=x.id;pendingShareRepertoireId=null;
   currentSharedContext={group_id:r.group_id,group_name:r.group_name,repertoire_id:r.id,repertoire_name:r.name,can_edit:!!x.can_edit,is_owner:!!x.is_owner};
-  document.getElementById("song-title").value=x.title;cifra=x.text;st=0;
+  document.getElementById("song-title").value=x.title;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";searchSource=null;
   currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));
   document.getElementById("raw-input").value=x.text;
   document.getElementById("cifra-editor").value=x.text;
@@ -2902,33 +2923,44 @@ async function doSearch(){
   document.getElementById("result-sources")?.classList.remove("on");
   document.getElementById("search-loading").classList.add("on");
   document.getElementById("search-btn").disabled=true;
-  document.getElementById("loading-txt").textContent="Buscando cifra na internet...";
+  document.getElementById("loading-txt").textContent="Buscando a versão correta...";
 
   try{
     const data=await apiFetch("/api/ai/search",{method:"POST",body:JSON.stringify({q})});
     const txt=(data.text||"").trim();
     if(!txt)throw new Error("Cifra não encontrada. Tente outro nome ou informe o cantor.");
 
-    document.getElementById("loading-txt").textContent="Organizando para apresentação...";
+    document.getElementById("loading-txt").textContent="Preparando a cifra...";
 
     const tit=(data.title||q).trim();
     const art=(data.artist||"").trim();
-    const tom=(data.tone||"").trim();
+    const tom=normalizeToneValue(data.tone||"");
 
-    // A própria busca já devolve a cifra organizada. Não fazemos uma segunda
-    // chamada de IA, evitando demora e alterações desnecessárias nos acordes.
+    // NOVA BUSCA = NOVA CIFRA. Nunca herda vínculo, tom, cantor ou transposição
+    // da música que estava aberta antes.
     currentCifraId=null;
+    currentSharedContext=null;
+    pendingShareRepertoireId=null;
+    currentSingerTones=[];
+    searchSource={name:(data.source||"").trim(),url:(data.url||"").trim(),artist:art};
+
+    // O servidor já entrega UMA versão congelada, vinda de UMA única fonte musical.
+    // Aqui só limpamos ruído de site; não chamamos outra IA e não rearmonizamos.
     cifra=cleanCifra(txt);
     st=0;
+    baseTone=tom || detectKey(cifra) || "";
     lastResult=txt;
-    lastSearchResult={status:"cifra",title:tit,artist:art,tone:tom,text:txt};
+    lastSearchResult={status:"cifra",title:tit,artist:art,tone:baseTone,text:txt,source:searchSource};
 
     document.getElementById("song-title").value=tit;
     document.getElementById("raw-input").value=cifra;
     document.getElementById("cifra-editor").value=cifra;
+    setCurrentEditAccess(true);
+    renderSingerAssignments();
+    renderShareContextBanner();
 
     switchTab("preview");
-    toast("✓ Cifra encontrada e pronta para tocar!");
+    toast("✓ Versão encontrada e congelada. Pronta para tocar!");
   }catch(e){
     toast(e.message||"Erro na busca.",1);
   }finally{
@@ -2940,8 +2972,8 @@ async function doSearch(){
 function useResult(){
   const txt=(lastSearchResult?.text||lastResult||"").trim();
   if(!txt){toast("Faça uma busca primeiro.",1);return;}
-  currentCifraId=null;
-  cifra=cleanCifra(txt);st=0;
+  currentCifraId=null;currentSharedContext=null;pendingShareRepertoireId=null;currentSingerTones=[];
+  cifra=cleanCifra(txt);st=0;baseTone=normalizeToneValue(lastSearchResult?.tone)||detectKey(cifra)||"";
   document.getElementById("raw-input").value=cifra;
   document.getElementById("cifra-editor").value=cifra;
   if(lastSearchResult?.title)document.getElementById("song-title").value=lastSearchResult.title;
@@ -3371,8 +3403,9 @@ function setCifraAndPreview(txt,filename){
   } else if(!document.getElementById("song-title").value.trim()&&filename){
     document.getElementById("song-title").value=filename.replace(/\.[^.]+$/,"").replace(/[-_]/g," ");
   }
+  const toneMatch=txt.match(/TOM:\s*(.+)/i);
   const cleaned=txt.replace(/TITULO:.+\n?/gi,"").replace(/ARTISTA:.+\n?/gi,"").replace(/TOM:.+\n?/gi,"").trim();
-  currentCifraId=null;cifra=cleaned;st=0;
+  currentCifraId=null;currentSharedContext=null;pendingShareRepertoireId=null;cifra=cleaned;st=0;baseTone=normalizeToneValue(toneMatch?.[1])||detectKey(cleaned)||"";searchSource=null;
   document.getElementById("raw-input").value=cleaned;
   document.getElementById("cifra-editor").value=cleaned;
   switchTab("preview");
@@ -3424,7 +3457,7 @@ function edFontSize(d){edFs=Math.min(26,Math.max(11,edFs+d));document.getElement
 
 function refreshPreview(){
   const disp=txText(cifra,st);
-  const k=detectKey(cifra);
+  const k=currentBaseTone();
   const tk=k?TONES[((NMAP[k]+st)%12+12)%12]:null;
   document.getElementById("tone-badge").textContent=tk||"—";
   document.getElementById("reset-btn").style.display=st?"":"none";
@@ -3442,8 +3475,8 @@ function doTranspose(d){st+=d;refreshPreview();}
 function resetTranspose(){st=0;refreshPreview();}
 function jumpToTone(val){
   if(!val)return;
-  const k=detectKey(cifra);
-  if(!k){toast("Nenhum acorde detectado.",1);return;}
+  const k=currentBaseTone();
+  if(!k){toast("Tom base não identificado.",1);return;}
   st=((NMAP[val]-NMAP[k])%12+12)%12;
   refreshPreview();
   document.getElementById("tone-select").value="";
@@ -3495,8 +3528,7 @@ async function saveCifraNow(){
   if(!currentUser){toast("Entre na sua conta para salvar na nuvem.",1);return;}
   if(isCurrentReadOnly()){toast("Você tem acesso somente para visualizar esta música.",1);return;}
   const title=document.getElementById("song-title").value.trim()||"Sem título";
-  const k=detectKey(cifra);
-  const tone=k?TONES[((NMAP[k]+st)%12+12)%12]:null;
+  const tone=currentDisplayedTone()||null;
   try{
     const singer_tones=currentSingerTones.map(x=>({singer_id:x.singer_id,tone:x.tone||null}));
     const payload={title,tone,text,singer_tones};
@@ -3506,6 +3538,11 @@ async function saveCifraNow(){
       ?await apiFetch("/api/cifras/"+encodeURIComponent(currentCifraId),{method:"PUT",body:JSON.stringify(payload)})
       :await apiFetch("/api/cifras",{method:"POST",body:JSON.stringify(payload)});
     const x=data.item;currentCifraId=x.id;
+    // O que foi salvo passa a ser a fonte canônica desta tela.
+    // Zera a transposição para nunca aplicar a mesma mudança duas vezes depois.
+    cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";
+    document.getElementById("raw-input").value=x.text;
+    document.getElementById("cifra-editor").value=x.text;
     currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));renderSingerAssignments();
     const item={id:x.id,title:x.title,tone:x.tone,text:x.text,singers:Array.isArray(x.singers)?x.singers:[],shared_count:Number(x.shared_count||0),date:x.updated_at||x.created_at};
     if(x.owner_user_id&&String(x.owner_user_id)!==String(currentUser.id)){
@@ -3542,7 +3579,7 @@ function renderLib(){
 function loadItem(id){
   const x=library.find(i=>i.id===id);if(!x)return;
   document.getElementById("song-title").value=x.title;
-  currentCifraId=x.id;currentSharedContext=null;pendingShareRepertoireId=null;cifra=x.text;st=0;
+  currentCifraId=x.id;currentSharedContext=null;pendingShareRepertoireId=null;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";searchSource=null;
   currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));
   document.getElementById("raw-input").value=x.text;
   document.getElementById("cifra-editor").value=x.text;
@@ -4259,7 +4296,7 @@ function presFontSize(d){pfz=Math.min(48,Math.max(8,pfz+d));document.getElementB
 // ══════════════════════════════════════════════════════
 function newCifra(){
   closeNewCifraMenu();
-  cifra="";st=0;currentCifraId=null;currentSingerTones=[];currentSharedContext=null;pendingShareRepertoireId=null;
+  cifra="";st=0;baseTone="";searchSource=null;currentCifraId=null;currentSingerTones=[];currentSharedContext=null;pendingShareRepertoireId=null;
   ["raw-input","cifra-editor","song-title"].forEach(id=>document.getElementById(id).value="");
   setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();setManualEditor(false);updateHomeCurrent();
   switchTab("editor");

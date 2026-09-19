@@ -1294,20 +1294,132 @@ Depois retorne a cifra limpa e organizada.`;
   }
 });
 
+function parseAiSearchField(raw, name) {
+  const rx = new RegExp(`^${name}:\\s*(.*)$`, 'im');
+  return String(raw || '').match(rx)?.[1]?.trim() || '';
+}
+
+function safeHttpUrl(value) {
+  const url = String(value || '').trim();
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function looksLikeUsableChordSheet(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return false;
+
+  // Nunca permita que avisos, tabelas de pesquisa ou explicações virem "cifra".
+  const blocked = [
+    /material protegido/i,
+    /direitos autorais/i,
+    /copyright/i,
+    /não (?:posso|é possível|posso fornecer).*letra/i,
+    /nao (?:posso|e possivel|posso fornecer).*letra/i,
+    /acordes principais encontrados/i,
+    /artista\s*\/\s*vers[aã]o/i,
+    /https?:\/\//i,
+    /^\s*\|.*\|\s*$/m,
+    /orienta[cç][aã]o/i
+  ];
+  if (blocked.some(rx => rx.test(raw))) return false;
+
+  const lines = raw.split(/\r?\n/).map(x => x.trimEnd()).filter(Boolean);
+  if (lines.length < 4) return false;
+
+  // Conta tokens de acorde e linhas de letra. Não exige um formato específico de site.
+  const chordToken = /(^|\s)(?:[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]*\))?(?:\/[A-G](?:#|b)?)?)(?=\s|$)/g;
+  let chordCount = 0;
+  let lyricLines = 0;
+  for (const line of lines) {
+    const chords = line.match(chordToken) || [];
+    chordCount += chords.length;
+    const withoutChords = line.replace(chordToken, ' ').replace(/[\[\](){}|_-]/g, ' ').trim();
+    if (/[A-Za-zÀ-ÿ]{3,}/.test(withoutChords) && !/^(intro|verso|refr[aã]o|coro|ponte|final)\b/i.test(withoutChords)) lyricLines++;
+  }
+  return chordCount >= 3 && lyricLines >= 3;
+}
+
 app.post('/api/ai/search', requireAuth, aiLimiter, async (req, res) => {
   try {
     const q = cleanString(req.body?.q, 300);
     if (!q) return res.status(400).json({ error: 'Digite o nome da musica.' });
-    const prompt = `Voce e um assistente para musicos. Pesquise informacoes de cifra para a musica: "${q}". Use fontes publicas disponiveis na web. Respeite direitos autorais e nao reproduza material protegido alem do permitido. Quando for possivel fornecer legitimamente uma cifra, preserve exatamente as posicoes dos acordes. Retorne no formato:\nTITULO: [nome]\nARTISTA: [artista]\nTOM: [tom]\n\n[conteudo disponivel/permitido ou uma orientacao curta para o usuario colar/importar a cifra que possui]`;
+
+    const prompt = `Voce ajuda musicos a LOCALIZAR uma cifra na web para a busca: "${q}".
+Use a ferramenta de pesquisa na web.
+
+OBJETIVO:
+1. Identifique corretamente titulo, artista/versao e tom quando a fonte informar.
+2. Se houver conteudo de cifra que possa ser fornecido integralmente, devolva uma cifra realmente utilizavel, com letra e acordes alinhados.
+3. Se nao puder fornecer a cifra completa, NAO escreva aviso de direitos autorais dentro da cifra. Retorne STATUS: REFERENCIA, com a melhor pagina-fonte encontrada.
+4. NUNCA invente letra ou acordes para completar uma musica.
+5. NUNCA devolva tabela Markdown, biografia, historia da musica ou lista de "acordes principais" no campo CIFRA.
+
+FORMATO OBRIGATORIO:
+STATUS: CIFRA ou REFERENCIA
+TITULO: nome
+ARTISTA: artista/versao
+TOM: tom, se conhecido
+FONTE: nome do site/fonte
+URL: link direto da pagina encontrada, se houver
+MOTIVO: frase curta apenas quando STATUS for REFERENCIA
+CIFRA:
+[apenas a cifra completa quando STATUS for CIFRA; deixe vazio quando for REFERENCIA]`;
+
     const data = await callAnthropic({
       model: AI_MODEL,
-      max_tokens: 6000,
+      max_tokens: 6500,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     });
-    const text = anthropicText(data);
-    if (!text) throw new Error('Nenhum resultado encontrado.');
-    res.json({ text });
+
+    const raw = anthropicText(data);
+    if (!raw) throw new Error('Nenhum resultado encontrado.');
+
+    const requestedStatus = parseAiSearchField(raw, 'STATUS').toUpperCase();
+    const title = parseAiSearchField(raw, 'TITULO') || q;
+    const artist = parseAiSearchField(raw, 'ARTISTA');
+    const tone = parseAiSearchField(raw, 'TOM');
+    const source = parseAiSearchField(raw, 'FONTE');
+    const url = safeHttpUrl(parseAiSearchField(raw, 'URL'));
+    const reason = parseAiSearchField(raw, 'MOTIVO');
+
+    const cifraMarker = raw.search(/^CIFRA:\s*$/im);
+    const candidate = cifraMarker >= 0
+      ? raw.slice(cifraMarker).replace(/^CIFRA:\s*/i, '').trim()
+      : '';
+
+    const usable = requestedStatus === 'CIFRA' && looksLikeUsableChordSheet(candidate);
+
+    if (usable) {
+      return res.json({
+        status: 'cifra',
+        title,
+        artist,
+        tone,
+        source,
+        url,
+        text: candidate,
+        message: ''
+      });
+    }
+
+    // Falha segura: explicacoes da IA nunca mais entram no editor/apresentacao.
+    return res.json({
+      status: 'reference',
+      title,
+      artist,
+      tone,
+      source,
+      url,
+      text: '',
+      message: reason || 'Encontrei a musica, mas nao uma cifra completa valida para importar automaticamente. Abra a fonte ou importe uma cifra que voce possui.'
+    });
   } catch (err) {
     console.error('ai search', err.message);
     res.status(err.status || 500).json({ error: err.message || 'Erro na busca.' });

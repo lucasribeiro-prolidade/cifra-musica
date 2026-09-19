@@ -1366,76 +1366,114 @@ function looksLikeUsableChordSheet(text) {
   return chordCount >= 2 && lyricLines >= 3;
 }
 
+function userRequestedAlternateArrangement(query) {
+  return /\b(?:ukulele|reggae|iniciante|simplificad[ao]|vers[aã]o\s*\d+|version\s*\d+)\b/i.test(String(query || ''));
+}
+
+function isAlternateArrangementSource(url, source, query) {
+  if (userRequestedAlternateArrangement(query)) return false;
+  const value = `${String(url || '')} ${String(source || '')}`.toLowerCase();
+  return /ukecifras|ukulele|\/iniciante(?:\.html)?|\/reggae(?:\.html)?|\/indefinida[-_/]|simplificad|vers[aã]o\s*\d+|version\s*\d+/.test(value);
+}
+
+function buildCifraSearchPrompt(q, excludedUrl = '') {
+  return `Você é especialista em localizar cifras musicais na web.
+
+BUSCA DO USUÁRIO: "${q}"
+
+OBJETIVO:
+Encontrar UMA única cifra principal, coerente e bem formatada da música correta.
+
+ORDEM DE ESCOLHA DA FONTE:
+1. Primeiro identifique com segurança o compositor/intérprete/versão pedida.
+2. Prefira a página PRINCIPAL de cifra para violão/guitarra do artista correto, com acordes em linhas próprias e letra logo abaixo.
+3. Se houver uma página principal no Cifra Club para o artista correto, ela pode ser usada; caso contrário use Cifras.com.br, Banana Cifras ou outra fonte de cifra com estrutura clara.
+4. NÃO fique preso a um único site: pesquise outras fontes quando necessário.
+5. NÃO use página de ukulele, versão iniciante, reggae, simplificada, versão numerada ou arranjo alternativo quando existir uma versão principal — a menos que o usuário peça explicitamente esse arranjo.
+6. NÃO use uma fonte cujo conteúdo apareça achatado em uma única linha ou em que não seja possível saber com segurança qual acorde pertence a qual verso.
+${excludedUrl ? `7. NÃO use novamente esta fonte rejeitada: ${excludedUrl}` : ''}
+
+REGRA DE FONTE ÚNICA:
+- Use outras páginas apenas para confirmar título/artista.
+- Depois de escolher a fonte principal, TODA a harmonia deve vir dessa MESMA página.
+- Nunca misture acordes de duas versões.
+
+FIDELIDADE MUSICAL:
+- Copie os acordes da fonte principal sem transpor, simplificar ou rearmonizar.
+- Preserve baixos e extensões, por exemplo D/F#, Bm7, F#m7, G9.
+- Preserve cada acorde sobre a palavra/sílaba correspondente.
+- Não substitua acordes por equivalentes de outra versão.
+- Não invente acordes ausentes.
+
+RETORNE SOMENTE:
+TITULO: [nome]
+ARTISTA: [artista/versão]
+TOM: [tom da fonte principal, em C, C#, D, Eb, E, F, F#, G, Ab, A, Bb ou B]
+FONTE: [nome do site]
+URL: [URL direta da página principal escolhida]
+
+[cifra da única fonte escolhida]
+
+Se nenhuma fonte principal tiver estrutura suficientemente clara para copiar sem adivinhar, retorne somente:
+ERRO: Não encontrei uma cifra principal confiável desta versão.`;
+}
+
+async function runCifraWebSearch(prompt) {
+  const data = await callAnthropic({
+    model: AI_MODEL,
+    max_tokens: 8000,
+    tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+    messages: [{ role: 'user', content: prompt }]
+  });
+  return anthropicText(data).trim();
+}
+
 app.post('/api/ai/search', requireAuth, aiLimiter, async (req, res) => {
   try {
     const q = cleanString(req.body?.q, 300);
     if (!q) return res.status(400).json({ error: 'Digite o nome da musica.' });
 
-    // v6.11 — pesquisar em várias fontes para IDENTIFICAR a versão,
-    // mas usar UMA ÚNICA fonte como referência musical. Nunca misturar harmonias.
-    const prompt = `Você é especialista em localizar cifras musicais na web.
-
-BUSCA DO USUÁRIO: "${q}"
-
-PROCESSO OBRIGATÓRIO:
-1. Pesquise em várias fontes relevantes para identificar corretamente a música e a versão/artista.
-2. Depois de identificar, ESCOLHA UMA ÚNICA página de cifra como FONTE MUSICAL PRINCIPAL.
-3. A partir daí, use SOMENTE essa página para letra, acordes, tom, seções e posições.
-4. NÃO combine acordes de versões diferentes. NÃO use um acorde de uma fonte e outro de outra.
-5. Se o usuário escreveu o artista/versão na busca, respeite exatamente essa versão.
-6. Se o usuário informou apenas o título e existirem várias versões, priorize a versão original/principal do compositor ou intérprete original quando isso puder ser identificado com segurança.
-7. Prefira a versão PRINCIPAL da fonte escolhida, não versões "iniciante", "reggae", "versão 2" etc., salvo se o usuário pedir isso.
-
-FIDELIDADE MUSICAL — REGRA ABSOLUTA:
-- Copie os nomes dos acordes exatamente como aparecem na fonte principal.
-- Preserve extensões e baixos: D/F#, Bm7, F#m7, G9 etc.
-- Preserve a posição de cada acorde sobre a palavra/sílaba correspondente.
-- NÃO transponha.
-- NÃO simplifique.
-- NÃO rearmonize.
-- NÃO complete acordes por conhecimento próprio.
-- NÃO reorganize a harmonia para "ficar melhor".
-- As outras fontes servem apenas para confirmar identidade da música, NUNCA para alterar a cifra escolhida.
-
-LIMPEZA PERMITIDA:
-- Remover menus, anúncios, links, tablaturas desnecessárias e textos que não pertencem à cifra.
-- Identificar [Intro], [Verso], [Refrão], [Ponte] apenas quando isso não altera a ordem original.
-
-RETORNE SOMENTE:
-TITULO: [nome]
-ARTISTA: [artista/versão da fonte escolhida]
-TOM: [tom da fonte escolhida, em C, C#, D, Eb, E, F, F#, G, Ab, A, Bb ou B]
-FONTE: [nome do site]
-URL: [URL direta da página escolhida]
-
-[cifra da ÚNICA fonte principal, sem misturar versões]
-
-Se não conseguir obter uma cifra completa e coerente de UMA única fonte depois de pesquisar, retorne somente:
-ERRO: Não encontrei uma cifra completa e confiável desta versão.`;
-
-    const data = await callAnthropic({
-      model: AI_MODEL,
-      max_tokens: 8000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      messages: [{ role: 'user', content: prompt }]
-    });
-
-    let raw = anthropicText(data).trim();
+    let raw = await runCifraWebSearch(buildCifraSearchPrompt(q));
     if (!raw) throw new Error('Nenhum resultado encontrado.');
 
     if (/^ERRO\s*:/i.test(raw)) {
       return res.status(404).json({
-        error: 'Não consegui encontrar uma cifra completa. Tente informar também o cantor ou a versão.'
+        error: 'Não consegui encontrar uma cifra principal completa. Tente informar também o cantor ou a versão.'
+      });
+    }
+
+    // Se a IA escolheu uma fonte alternativa/achatada sem o usuário pedir,
+    // fazemos UMA nova busca excluindo aquela fonte. Isso evita casos como
+    // cifra de ukulele sendo usada como se fosse a versão principal de violão.
+    let source = parseAiSearchField(raw, 'FONTE');
+    let url = safeHttpUrl(parseAiSearchField(raw, 'URL'));
+    if (isAlternateArrangementSource(url, source, q)) {
+      const retry = await runCifraWebSearch(buildCifraSearchPrompt(q, url || source));
+      if (retry && !/^ERRO\s*:/i.test(retry)) {
+        const retrySource = parseAiSearchField(retry, 'FONTE');
+        const retryUrl = safeHttpUrl(parseAiSearchField(retry, 'URL'));
+        if (!isAlternateArrangementSource(retryUrl, retrySource, q)) {
+          raw = retry;
+          source = retrySource;
+          url = retryUrl;
+        }
+      }
+    }
+
+    // Se mesmo após o retry só apareceu arranjo alternativo, é melhor avisar
+    // do que carregar uma harmonia errada como se fosse a principal.
+    if (isAlternateArrangementSource(url, source, q)) {
+      return res.status(404).json({
+        error: 'Encontrei apenas versões alternativas desta música. Informe o cantor/versão para eu buscar a cifra correta.'
       });
     }
 
     const title = parseAiSearchField(raw, 'TITULO') || q;
     const artist = parseAiSearchField(raw, 'ARTISTA');
     const tone = parseAiSearchField(raw, 'TOM');
-    const source = parseAiSearchField(raw, 'FONTE');
-    const url = safeHttpUrl(parseAiSearchField(raw, 'URL'));
+    source = parseAiSearchField(raw, 'FONTE');
+    url = safeHttpUrl(parseAiSearchField(raw, 'URL'));
 
-    // Remove apenas o cabeçalho de metadados. O restante é a cifra.
     let text = raw
       .replace(/^```(?:text|txt|markdown)?\s*$/gim, '')
       .replace(/^```\s*$/gim, '')
@@ -1450,23 +1488,20 @@ ERRO: Não encontrei uma cifra completa e confiável desta versão.`;
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    // A versão antiga aceitava praticamente qualquer resposta. Aqui mantemos
-    // apenas uma proteção mínima para impedir que uma explicação vire cifra.
     const refusalOrExplanation = /(?:direitos autorais|material protegido|copyright|não posso fornecer|nao posso fornecer|não é possível fornecer|nao e possivel fornecer|acordes principais encontrados|artista\s*\/\s*vers[aã]o)/i;
     if (!text || text.length < 60 || refusalOrExplanation.test(text)) {
       return res.status(404).json({
-        error: 'Encontrei referências da música, mas não uma cifra completa para carregar. Tente informar também o cantor ou outra versão.'
+        error: 'Encontrei a música, mas não uma cifra completa e confiável para carregar. Tente informar também o cantor.'
       });
     }
 
-    // Validação leve: precisa parecer conteúdo musical, sem a rigidez da v6.7/v6.8.
     const lines = text.split(/\r?\n/).filter(x => x.trim());
     const chordRx = /(?:^|\s)[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]*\))?(?:\/[A-G](?:#|b)?)?(?=\s|$)/g;
     const chordCount = (text.match(chordRx) || []).length;
     const lyricCount = lines.filter(line => /[A-Za-zÀ-ÿ]{3,}/.test(line) && !/^\s*[A-G](?:#|b)?(?:\S*\s+)*$/i.test(line)).length;
     if (lines.length < 4 || chordCount < 1 || lyricCount < 2) {
       return res.status(404).json({
-        error: 'Não consegui montar uma cifra completa desta busca. Tente incluir o nome do cantor ou da versão.'
+        error: 'A fonte encontrada não veio bem estruturada. Tente incluir o nome do cantor ou da versão.'
       });
     }
 

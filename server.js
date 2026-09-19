@@ -1371,38 +1371,47 @@ app.post('/api/ai/search', requireAuth, aiLimiter, async (req, res) => {
     const q = cleanString(req.body?.q, 300);
     if (!q) return res.status(400).json({ error: 'Digite o nome da musica.' });
 
-    // v6.10 — volta ao fluxo simples da versão inicial:
-    // buscar -> encontrar a cifra -> organizar -> devolver pronta.
-    // A chave continua protegida no servidor.
-    const prompt = `Você é especialista em cifras musicais para músicos.
+    // v6.11 — pesquisar em várias fontes para IDENTIFICAR a versão,
+    // mas usar UMA ÚNICA fonte como referência musical. Nunca misturar harmonias.
+    const prompt = `Você é especialista em localizar cifras musicais na web.
 
-Busque na web uma cifra COMPLETA e utilizável da música: "${q}".
+BUSCA DO USUÁRIO: "${q}"
 
-PESQUISA:
-- Pesquise em VÁRIAS fontes de cifras e música, não apenas em um site.
-- Você pode consultar Cifra Club, Cifras.com.br, Banana Cifras e outras fontes relevantes encontradas na web.
-- Não pare no primeiro resultado: confirme que é a música/versão correta.
-- Se a busca informar cantor/versão, respeite essa versão. Se não informar, priorize a versão mais conhecida/original.
+PROCESSO OBRIGATÓRIO:
+1. Pesquise em várias fontes relevantes para identificar corretamente a música e a versão/artista.
+2. Depois de identificar, ESCOLHA UMA ÚNICA página de cifra como FONTE MUSICAL PRINCIPAL.
+3. A partir daí, use SOMENTE essa página para letra, acordes, tom, seções e posições.
+4. NÃO combine acordes de versões diferentes. NÃO use um acorde de uma fonte e outro de outra.
+5. Se o usuário escreveu o artista/versão na busca, respeite exatamente essa versão.
+6. Se o usuário informou apenas o título e existirem várias versões, priorize a versão original/principal do compositor ou intérprete original quando isso puder ser identificado com segurança.
+7. Prefira a versão PRINCIPAL da fonte escolhida, não versões "iniciante", "reggae", "versão 2" etc., salvo se o usuário pedir isso.
 
-OBJETIVO:
-- Entregar a cifra já limpa e pronta para tocar no aplicativo.
-- Preserve os acordes exatamente como encontrados.
-- Preserve o posicionamento dos acordes em relação às palavras/sílabas.
-- Organize acordes em linhas acima da letra, mantendo espaços e quebras de linha.
-- Preserve estrofes, refrões, pontes e introduções quando existirem.
-- Remova anúncios, menus, links, biografias, comentários, tablaturas desnecessárias e textos que não façam parte da cifra.
-- Não invente letra, acordes ou tom.
+FIDELIDADE MUSICAL — REGRA ABSOLUTA:
+- Copie os nomes dos acordes exatamente como aparecem na fonte principal.
+- Preserve extensões e baixos: D/F#, Bm7, F#m7, G9 etc.
+- Preserve a posição de cada acorde sobre a palavra/sílaba correspondente.
+- NÃO transponha.
+- NÃO simplifique.
+- NÃO rearmonize.
+- NÃO complete acordes por conhecimento próprio.
+- NÃO reorganize a harmonia para "ficar melhor".
+- As outras fontes servem apenas para confirmar identidade da música, NUNCA para alterar a cifra escolhida.
 
-RETORNE SOMENTE neste formato:
-TITULO: [nome da música]
-ARTISTA: [artista/versão]
-TOM: [tom]
+LIMPEZA PERMITIDA:
+- Remover menus, anúncios, links, tablaturas desnecessárias e textos que não pertencem à cifra.
+- Identificar [Intro], [Verso], [Refrão], [Ponte] apenas quando isso não altera a ordem original.
 
-[cifra completa e organizada]
+RETORNE SOMENTE:
+TITULO: [nome]
+ARTISTA: [artista/versão da fonte escolhida]
+TOM: [tom da fonte escolhida, em C, C#, D, Eb, E, F, F#, G, Ab, A, Bb ou B]
+FONTE: [nome do site]
+URL: [URL direta da página escolhida]
 
-NÃO retorne lista de fontes, links, tabela, explicações, avisos ou texto sobre direitos autorais.
-Se não conseguir obter uma cifra completa e utilizável depois de pesquisar várias fontes, retorne apenas:
-ERRO: Não encontrei uma cifra completa para esta música.`;
+[cifra da ÚNICA fonte principal, sem misturar versões]
+
+Se não conseguir obter uma cifra completa e coerente de UMA única fonte depois de pesquisar, retorne somente:
+ERRO: Não encontrei uma cifra completa e confiável desta versão.`;
 
     const data = await callAnthropic({
       model: AI_MODEL,
@@ -1423,6 +1432,8 @@ ERRO: Não encontrei uma cifra completa para esta música.`;
     const title = parseAiSearchField(raw, 'TITULO') || q;
     const artist = parseAiSearchField(raw, 'ARTISTA');
     const tone = parseAiSearchField(raw, 'TOM');
+    const source = parseAiSearchField(raw, 'FONTE');
+    const url = safeHttpUrl(parseAiSearchField(raw, 'URL'));
 
     // Remove apenas o cabeçalho de metadados. O restante é a cifra.
     let text = raw
@@ -1464,6 +1475,8 @@ ERRO: Não encontrei uma cifra completa para esta música.`;
       title,
       artist,
       tone,
+      source,
+      url,
       text
     });
   } catch (err) {

@@ -2036,16 +2036,23 @@ function renderSavedHarpaPresentation(text){
   return html;
 }
 
-function txChord(c,st){
+function tonePrefersFlats(tone){
+  return ["F","Bb","Eb","Ab","Db","Gb"].includes(String(tone||""));
+}
+function txChord(c,st,useFlats=false){
+  const table=useFlats?FLAT:SHARP;
   return c.replace(/[A-G][#b]?/g,n=>{
     const idx=NMAP[n];if(idx===undefined)return n;
-    const ni=((idx+st)%12+12)%12;return st>=0?SHARP[ni]:FLAT[ni];
+    const ni=((idx+st)%12+12)%12;return table[ni];
   });
 }
 function txText(text,st){
   if(!st)return text;
+  const base=(typeof currentBaseTone==="function")?currentBaseTone():detectKey(text);
+  const target=base?TONES[((NMAP[base]+st)%12+12)%12]:"";
+  const useFlats=tonePrefersFlats(target);
   const re=/[A-G][#b]?(?:maj|min|m(?!aj)|dim|aug|sus\d*|add\d*|°|ø|\d+)*(?:\/[A-G][#b]?)?/g;
-  return text.split("\n").map(l=>isChord(l)?l.replace(re,c=>txChord(c,st)):l).join("\n");
+  return text.split("\n").map(l=>isChord(l)?l.replace(re,c=>txChord(c,st,useFlats)):l).join("\n");
 }
 function detectKey(text){
   for(const l of text.split("\n")){if(isChord(l)){const m=l.match(/[A-G][#b]?/);if(m)return m[0];}}
@@ -2246,10 +2253,22 @@ function normalizeToneValue(value){
       return note;
     }
   }
-  const m=v.match(/([A-G](?:#|b)?)/i);
+  const m=v.match(/\b([A-G](?:#|b)?)\b/i);
   if(!m)return "";
   const n=m[1][0].toUpperCase()+m[1].slice(1);
   return NMAP[n]!==undefined?n:"";
+}
+function normalizeEnharmonicMinorForTone(text,tone){
+  const t=normalizeToneValue(tone);
+  // Em tons que normalmente usam sustenidos, corrige grafias teóricas que
+  // aparecem em algumas fontes/transposições (ex.: Gbm = F#m).
+  const sharpKeys=["G","D","A","E","B","F#","C#"];
+  if(!sharpKeys.includes(t))return String(text||"");
+  const map={"Gbm":"F#m","Gbm7":"F#m7","Dbm":"C#m","Dbm7":"C#m7","Abm":"G#m","Abm7":"G#m7","Ebm":"D#m","Ebm7":"D#m7"};
+  return String(text||"").split("\n").map(line=>{
+    if(!isChord(line))return line;
+    return line.replace(/\b(?:Gbm7?|Dbm7?|Abm7?|Ebm7?)\b/g,ch=>map[ch]||ch);
+  }).join("\n");
 }
 function currentBaseTone(){
   const b=normalizeToneValue(baseTone);
@@ -2717,7 +2736,7 @@ function openSharedSong(id){
   const r=groupView.repertoire,x=(groupView.sharedItems||[]).find(a=>a.id===id);if(!x||!r)return;
   currentCifraId=x.id;pendingShareRepertoireId=null;
   currentSharedContext={group_id:r.group_id,group_name:r.group_name,repertoire_id:r.id,repertoire_name:r.name,can_edit:!!x.can_edit,is_owner:!!x.is_owner};
-  document.getElementById("song-title").value=x.title;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";searchSource=null;
+  document.getElementById("song-title").value=x.title;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";cifra=normalizeEnharmonicMinorForTone(cifra,baseTone);searchSource=null;
   currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));
   document.getElementById("raw-input").value=x.text;
   document.getElementById("cifra-editor").value=x.text;
@@ -2949,6 +2968,7 @@ async function doSearch(){
     cifra=cleanCifra(txt);
     st=0;
     baseTone=tom || detectKey(cifra) || "";
+    cifra=normalizeEnharmonicMinorForTone(cifra,baseTone);
     lastResult=txt;
     lastSearchResult={status:"cifra",title:tit,artist:art,tone:baseTone,text:txt,source:searchSource};
 
@@ -3579,7 +3599,7 @@ function renderLib(){
 function loadItem(id){
   const x=library.find(i=>i.id===id);if(!x)return;
   document.getElementById("song-title").value=x.title;
-  currentCifraId=x.id;currentSharedContext=null;pendingShareRepertoireId=null;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";searchSource=null;
+  currentCifraId=x.id;currentSharedContext=null;pendingShareRepertoireId=null;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";cifra=normalizeEnharmonicMinorForTone(cifra,baseTone);searchSource=null;
   currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));
   document.getElementById("raw-input").value=x.text;
   document.getElementById("cifra-editor").value=x.text;

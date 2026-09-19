@@ -2917,7 +2917,7 @@ async function doSearch(){
     lastResult=status==="cifra"?txt:"";
 
     document.getElementById("result-title").textContent=tit;
-    document.getElementById("result-meta").textContent=[art?"Artista: "+art:"",tom?"Tom: "+tom:"",sources.length?`${sources.length} fonte(s) encontrada(s)`:""].filter(Boolean).join(" · ");
+    document.getElementById("result-meta").textContent=[art?"Artista: "+art:"",tom?"Tom: "+tom:"",sources.length?`${sources.length} fonte(s) consultada(s)`:""].filter(Boolean).join(" · ");
 
     const badge=document.getElementById("result-badge");
     const useBtn=document.getElementById("use-search-result-btn");
@@ -2930,20 +2930,46 @@ async function doSearch(){
     renderSearchSources(sources);
 
     if(status==="cifra" && txt){
+      // Fluxo automático: encontrou -> IA organiza -> abre pronto para tocar.
       badge.textContent="Cifra encontrada";
       resultBox.classList.remove("reference","not-found");
-      message.textContent=data.message||"";
-      preview.textContent=txt.split("\n").slice(0,18).join("\n");
-      useBtn.style.display="";
+      message.textContent="Cifra encontrada. A IA está organizando para apresentação...";
+      preview.textContent=txt.split("\n").slice(0,14).join("\n");
+      useBtn.style.display="none";
       sourceBtn.style.display="none";
       importBtn.style.display="none";
       pasteBtn.style.display="none";
-      if(!document.getElementById("song-title").value)document.getElementById("song-title").value=tit;
-    }else if(status==="not_found"){
+      resultBox.classList.add("on");
+
+      if(tit)document.getElementById("song-title").value=tit;
+      document.getElementById("loading-txt").textContent="IA organizando a cifra...";
+
+      let readyText=txt;
+      try{
+        const organized=await apiFetch("/api/ai/organize",{
+          method:"POST",
+          body:JSON.stringify({text:txt})
+        });
+        if((organized.text||"").trim())readyText=organized.text.trim();
+      }catch(orgErr){
+        // Se a organização falhar, usa a cifra encontrada em vez de perder o resultado.
+        console.warn("Organização automática falhou; usando cifra encontrada.",orgErr);
+      }
+
+      currentCifraId=null;
+      setCifraAndPreview(readyText,tit||"");
+      if(tit)document.getElementById("song-title").value=tit;
+      lastResult=readyText;
+      lastSearchResult={...data,status:"cifra",text:readyText};
+      toast("✓ Cifra encontrada, organizada e pronta para tocar!");
+      return;
+    }
+
+    if(status==="not_found"){
       badge.textContent="Não encontrada";
       resultBox.classList.add("not-found");
       resultBox.classList.remove("reference");
-      message.textContent=data.message||"Não encontrei uma cifra confiável. Tente informar também o cantor ou a versão.";
+      message.textContent=data.message||"Não encontrei uma cifra completa. Tente informar também o cantor ou a versão.";
       preview.textContent="";
       useBtn.style.display="none";
       sourceBtn.style.display="none";
@@ -2953,7 +2979,7 @@ async function doSearch(){
       badge.textContent=sources.length>1?"Fontes encontradas":"Fonte encontrada";
       resultBox.classList.add("reference");
       resultBox.classList.remove("not-found");
-      message.textContent=data.message||`Pesquisei a web e encontrei ${sources.length||1} fonte(s) para esta música.`;
+      message.textContent=data.message||"Encontrei páginas da música, mas nenhuma trouxe conteúdo completo para importar automaticamente.";
       preview.textContent="";
       useBtn.style.display="none";
       sourceBtn.style.display="none";

@@ -1628,7 +1628,7 @@ main{max-width:760px}
       <button class="home-card" onclick="openHarpa()"><span class="home-card-icon">📖</span><span><span class="home-card-title">Harpa Cristã</span><br><span class="home-card-sub">Harpa Cristã Cifrada completa, hinos 1 a 640.</span></span></button>
       <button class="home-card" onclick="openGroups()"><span class="home-card-icon">👥</span><span><span class="home-card-title">Grupos</span><br><span class="home-card-sub">Pastas e repertórios compartilhados.</span></span></button>
       <button class="home-card" onclick="openSingers()"><span class="home-card-icon">🎤</span><span><span class="home-card-title">Cantores</span><br><span class="home-card-sub">Cadastre cantores e seus tons.</span></span></button>
-      <button class="home-card" onclick="switchTab('search')"><span class="home-card-icon">🔍</span><span><span class="home-card-title">Buscar música</span><br><span class="home-card-sub">Use a IA para localizar e organizar uma cifra.</span></span></button>
+      <button class="home-card" onclick="switchTab('search')"><span class="home-card-icon">🔍</span><span><span class="home-card-title">Buscar música</span><br><span class="home-card-sub">Busca na internet e prepara a cifra automaticamente.</span></span></button>
       <button class="home-card" onclick="switchTab('editor')"><span class="home-card-icon">✏️</span><span><span class="home-card-title">Colar / editar</span><br><span class="home-card-sub">Abra diretamente a área de edição.</span></span></button>
       <button class="home-card" onclick="openHelp()"><span class="home-card-icon">❓</span><span><span class="home-card-title">Ajuda / Como usar</span><br><span class="home-card-sub">Veja um guia rápido para usar o Cifra-Musica.</span></span></button>
     </div>
@@ -2898,96 +2898,37 @@ async function doSearch(){
 
   document.getElementById("no-api-box").style.display="none";
   const resultBox=document.getElementById("search-result");
-  resultBox.classList.remove("on","reference","not-found");
+  resultBox?.classList.remove("on","reference","not-found");
   document.getElementById("result-sources")?.classList.remove("on");
   document.getElementById("search-loading").classList.add("on");
   document.getElementById("search-btn").disabled=true;
-  document.getElementById("loading-txt").textContent="Pesquisando em várias fontes...";
+  document.getElementById("loading-txt").textContent="Buscando cifra na internet...";
 
   try{
     const data=await apiFetch("/api/ai/search",{method:"POST",body:JSON.stringify({q})});
-    const status=(data.status||"reference").toLowerCase();
+    const txt=(data.text||"").trim();
+    if(!txt)throw new Error("Cifra não encontrada. Tente outro nome ou informe o cantor.");
+
+    document.getElementById("loading-txt").textContent="Organizando para apresentação...";
+
     const tit=(data.title||q).trim();
     const art=(data.artist||"").trim();
     const tom=(data.tone||"").trim();
-    const txt=(data.text||"").trim();
-    const sources=Array.isArray(data.sources)?data.sources:[];
 
-    lastSearchResult=data;
-    lastResult=status==="cifra"?txt:"";
+    // A própria busca já devolve a cifra organizada. Não fazemos uma segunda
+    // chamada de IA, evitando demora e alterações desnecessárias nos acordes.
+    currentCifraId=null;
+    cifra=cleanCifra(txt);
+    st=0;
+    lastResult=txt;
+    lastSearchResult={status:"cifra",title:tit,artist:art,tone:tom,text:txt};
 
-    document.getElementById("result-title").textContent=tit;
-    document.getElementById("result-meta").textContent=[art?"Artista: "+art:"",tom?"Tom: "+tom:"",sources.length?`${sources.length} fonte(s) consultada(s)`:""].filter(Boolean).join(" · ");
+    document.getElementById("song-title").value=tit;
+    document.getElementById("raw-input").value=cifra;
+    document.getElementById("cifra-editor").value=cifra;
 
-    const badge=document.getElementById("result-badge");
-    const useBtn=document.getElementById("use-search-result-btn");
-    const sourceBtn=document.getElementById("open-search-source-btn");
-    const importBtn=document.getElementById("import-search-file-btn");
-    const pasteBtn=document.getElementById("paste-search-btn");
-    const message=document.getElementById("result-message");
-    const preview=document.getElementById("result-preview");
-
-    renderSearchSources(sources);
-
-    if(status==="cifra" && txt){
-      // Fluxo automático: encontrou -> IA organiza -> abre pronto para tocar.
-      badge.textContent="Cifra encontrada";
-      resultBox.classList.remove("reference","not-found");
-      message.textContent="Cifra encontrada. A IA está organizando para apresentação...";
-      preview.textContent=txt.split("\n").slice(0,14).join("\n");
-      useBtn.style.display="none";
-      sourceBtn.style.display="none";
-      importBtn.style.display="none";
-      pasteBtn.style.display="none";
-      resultBox.classList.add("on");
-
-      if(tit)document.getElementById("song-title").value=tit;
-      document.getElementById("loading-txt").textContent="IA organizando a cifra...";
-
-      let readyText=txt;
-      try{
-        const organized=await apiFetch("/api/ai/organize",{
-          method:"POST",
-          body:JSON.stringify({text:txt})
-        });
-        if((organized.text||"").trim())readyText=organized.text.trim();
-      }catch(orgErr){
-        // Se a organização falhar, usa a cifra encontrada em vez de perder o resultado.
-        console.warn("Organização automática falhou; usando cifra encontrada.",orgErr);
-      }
-
-      currentCifraId=null;
-      setCifraAndPreview(readyText,tit||"");
-      if(tit)document.getElementById("song-title").value=tit;
-      lastResult=readyText;
-      lastSearchResult={...data,status:"cifra",text:readyText};
-      toast("✓ Cifra encontrada, organizada e pronta para tocar!");
-      return;
-    }
-
-    if(status==="not_found"){
-      badge.textContent="Não encontrada";
-      resultBox.classList.add("not-found");
-      resultBox.classList.remove("reference");
-      message.textContent=data.message||"Não encontrei uma cifra completa. Tente informar também o cantor ou a versão.";
-      preview.textContent="";
-      useBtn.style.display="none";
-      sourceBtn.style.display="none";
-      importBtn.style.display="";
-      pasteBtn.style.display="";
-    }else{
-      badge.textContent=sources.length>1?"Fontes encontradas":"Fonte encontrada";
-      resultBox.classList.add("reference");
-      resultBox.classList.remove("not-found");
-      message.textContent=data.message||"Encontrei páginas da música, mas nenhuma trouxe conteúdo completo para importar automaticamente.";
-      preview.textContent="";
-      useBtn.style.display="none";
-      sourceBtn.style.display="none";
-      importBtn.style.display="";
-      pasteBtn.style.display="";
-    }
-
-    resultBox.classList.add("on");
+    switchTab("preview");
+    toast("✓ Cifra encontrada e pronta para tocar!");
   }catch(e){
     toast(e.message||"Erro na busca.",1);
   }finally{
@@ -2997,16 +2938,13 @@ async function doSearch(){
 }
 
 function useResult(){
-  if(!lastSearchResult || lastSearchResult.status!=="cifra" || !lastSearchResult.text){
-    toast("Esta busca não trouxe uma cifra completa para importar.",1);
-    return;
-  }
+  const txt=(lastSearchResult?.text||lastResult||"").trim();
+  if(!txt){toast("Faça uma busca primeiro.",1);return;}
   currentCifraId=null;
-  cifra=cleanCifra(lastSearchResult.text.trim());
-  st=0;
+  cifra=cleanCifra(txt);st=0;
   document.getElementById("raw-input").value=cifra;
   document.getElementById("cifra-editor").value=cifra;
-  if(lastSearchResult.title)document.getElementById("song-title").value=lastSearchResult.title;
+  if(lastSearchResult?.title)document.getElementById("song-title").value=lastSearchResult.title;
   switchTab("preview");
   toast("✓ Cifra carregada!");
 }

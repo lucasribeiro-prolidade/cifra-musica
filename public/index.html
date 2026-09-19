@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -109,6 +110,17 @@ textarea.editor{width:100%;background:transparent;border:none;padding:14px;color
 .search-result.reference .result-preview{display:none}
 .result-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .result-actions .btn{flex:1;min-width:120px}
+.result-sources{display:none;margin-top:12px;border-top:1px solid #4b4025;padding-top:10px}
+.result-sources.on{display:block}
+.result-sources-title{font-size:11px;color:#a99d8c;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-weight:800}
+.result-source-list{display:flex;flex-direction:column;gap:7px}
+.result-source-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:#191816;border:1px solid #3b3730;color:#e8e1d7;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:13px}
+.result-source-btn:hover{border-color:#665b43;background:#211f1a}
+.result-source-btn strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.result-source-btn span{color:#8f8579;font-size:11px;flex-shrink:0}
+.search-result.not-found{background:#251919;border-color:#553030}
+.search-result.not-found .result-title{color:#fca5a5}
+.search-result.not-found .result-badge{background:#3b1717;color:#fca5a5}
 
 /* import */
 .import-zone{width:100%;background:#1a2a1a;border:2px dashed #2a5a2a;border-radius:12px;padding:18px;color:#86efac;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;transition:background .2s}
@@ -1646,7 +1658,7 @@ main{max-width:760px}
           Buscar
         </button>
       </div>
-      <div class="search-hint">Busca via IA — <a href="#" onclick="openApiModal();return false">chave protegida no servidor</a></div>
+      <div class="search-hint">Pesquisa em várias fontes da web — <a href="#" onclick="openApiModal();return false">IA protegida no servidor</a></div>
     </div>
     <div class="search-loading" id="search-loading"><div class="spinner"></div><span id="loading-txt">Buscando...</span></div>
     <div class="search-result" id="search-result">
@@ -1659,6 +1671,10 @@ main{max-width:760px}
       </div>
       <div class="result-message" id="result-message"></div>
       <div class="result-preview" id="result-preview"></div>
+      <div class="result-sources" id="result-sources">
+        <div class="result-sources-title">Fontes encontradas</div>
+        <div class="result-source-list" id="result-source-list"></div>
+      </div>
       <div class="result-actions">
         <button class="btn btn-gold" id="use-search-result-btn" onclick="useResult()">✓ Usar cifra</button>
         <button class="btn btn-dark" id="open-search-source-btn" style="display:none" onclick="openSearchSource()">🌐 Abrir fonte</button>
@@ -2853,6 +2869,28 @@ function switchTab(tab){
 // ══════════════════════════════════════════════════════
 // SEARCH (AI + web)
 // ══════════════════════════════════════════════════════
+function renderSearchSources(sources){
+  const wrap=document.getElementById("result-sources");
+  const list=document.getElementById("result-source-list");
+  if(!wrap||!list)return;
+  list.innerHTML="";
+  const items=Array.isArray(sources)?sources.filter(x=>x&&/^https?:\/\//i.test(x.url||"")):[];
+  if(!items.length){wrap.classList.remove("on");return;}
+  items.slice(0,5).forEach((item,idx)=>{
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="result-source-btn";
+    const strong=document.createElement("strong");
+    strong.textContent=(idx+1)+". "+(item.name||"Abrir fonte");
+    const span=document.createElement("span");
+    span.textContent="Abrir ↗";
+    btn.appendChild(strong);btn.appendChild(span);
+    btn.addEventListener("click",()=>openSearchSource(idx));
+    list.appendChild(btn);
+  });
+  wrap.classList.add("on");
+}
+
 async function doSearch(){
   const q=document.getElementById("search-input").value.trim();
   if(!q){toast("Digite o nome da música!",1);return;}
@@ -2860,24 +2898,26 @@ async function doSearch(){
 
   document.getElementById("no-api-box").style.display="none";
   const resultBox=document.getElementById("search-result");
-  resultBox.classList.remove("on","reference");
+  resultBox.classList.remove("on","reference","not-found");
+  document.getElementById("result-sources")?.classList.remove("on");
   document.getElementById("search-loading").classList.add("on");
   document.getElementById("search-btn").disabled=true;
-  document.getElementById("loading-txt").textContent="Procurando música e cifra...";
+  document.getElementById("loading-txt").textContent="Pesquisando em várias fontes...";
 
   try{
     const data=await apiFetch("/api/ai/search",{method:"POST",body:JSON.stringify({q})});
-    const status=(data.status||"").toLowerCase()==="cifra"?"cifra":"reference";
+    const status=(data.status||"reference").toLowerCase();
     const tit=(data.title||q).trim();
     const art=(data.artist||"").trim();
     const tom=(data.tone||"").trim();
     const txt=(data.text||"").trim();
+    const sources=Array.isArray(data.sources)?data.sources:[];
 
     lastSearchResult=data;
     lastResult=status==="cifra"?txt:"";
 
     document.getElementById("result-title").textContent=tit;
-    document.getElementById("result-meta").textContent=[art?"Artista: "+art:"",tom?"Tom: "+tom:"",data.source?"Fonte: "+data.source:""].filter(Boolean).join(" · ");
+    document.getElementById("result-meta").textContent=[art?"Artista: "+art:"",tom?"Tom: "+tom:"",sources.length?`${sources.length} fonte(s) encontrada(s)`:""].filter(Boolean).join(" · ");
 
     const badge=document.getElementById("result-badge");
     const useBtn=document.getElementById("use-search-result-btn");
@@ -2887,23 +2927,36 @@ async function doSearch(){
     const message=document.getElementById("result-message");
     const preview=document.getElementById("result-preview");
 
+    renderSearchSources(sources);
+
     if(status==="cifra" && txt){
       badge.textContent="Cifra encontrada";
-      resultBox.classList.remove("reference");
-      message.textContent="";
-      preview.textContent=txt.split("\n").slice(0,16).join("\n");
+      resultBox.classList.remove("reference","not-found");
+      message.textContent=data.message||"";
+      preview.textContent=txt.split("\n").slice(0,18).join("\n");
       useBtn.style.display="";
-      sourceBtn.style.display=data.url?"":"none";
+      sourceBtn.style.display="none";
       importBtn.style.display="none";
       pasteBtn.style.display="none";
       if(!document.getElementById("song-title").value)document.getElementById("song-title").value=tit;
-    }else{
-      badge.textContent="Referência encontrada";
-      resultBox.classList.add("reference");
-      message.textContent=data.message||"Encontrei a música, mas não uma cifra completa que possa ser importada automaticamente. Abra a fonte ou use uma cifra que você possui.";
+    }else if(status==="not_found"){
+      badge.textContent="Não encontrada";
+      resultBox.classList.add("not-found");
+      resultBox.classList.remove("reference");
+      message.textContent=data.message||"Não encontrei uma cifra confiável. Tente informar também o cantor ou a versão.";
       preview.textContent="";
       useBtn.style.display="none";
-      sourceBtn.style.display=data.url?"":"none";
+      sourceBtn.style.display="none";
+      importBtn.style.display="";
+      pasteBtn.style.display="";
+    }else{
+      badge.textContent=sources.length>1?"Fontes encontradas":"Fonte encontrada";
+      resultBox.classList.add("reference");
+      resultBox.classList.remove("not-found");
+      message.textContent=data.message||`Pesquisei a web e encontrei ${sources.length||1} fonte(s) para esta música.`;
+      preview.textContent="";
+      useBtn.style.display="none";
+      sourceBtn.style.display="none";
       importBtn.style.display="";
       pasteBtn.style.display="";
     }
@@ -2932,10 +2985,13 @@ function useResult(){
   toast("✓ Cifra carregada!");
 }
 
-function openSearchSource(){
-  const url=lastSearchResult?.url||"";
+function openSearchSource(index=0){
+  const sources=Array.isArray(lastSearchResult?.sources)?lastSearchResult.sources:[];
+  const fallback=lastSearchResult?.url?{url:lastSearchResult.url}:null;
+  const item=sources[index]||fallback;
+  const url=item?.url||"";
   if(!/^https?:\/\//i.test(url)){
-    toast("A busca não retornou um link de fonte.",1);
+    toast("A busca não retornou um link válido para esta fonte.",1);
     return;
   }
   window.open(url,"_blank","noopener,noreferrer");
@@ -2952,7 +3008,9 @@ function pasteFromSearch(){
 function clearSearch(){
   document.getElementById("search-input").value="";
   const resultBox=document.getElementById("search-result");
-  resultBox.classList.remove("on","reference");
+  resultBox.classList.remove("on","reference","not-found");
+  document.getElementById("result-sources")?.classList.remove("on");
+  const list=document.getElementById("result-source-list");if(list)list.innerHTML="";
   document.getElementById("no-api-box").style.display="none";
   lastResult="";
   lastSearchResult=null;

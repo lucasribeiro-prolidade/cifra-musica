@@ -1,3 +1,4 @@
+
 'use strict';
 
 const path = require('path');
@@ -1310,11 +1311,33 @@ function safeHttpUrl(value) {
   }
 }
 
+function parseAiSearchSources(raw) {
+  const out = [];
+  const seen = new Set();
+  const text = String(raw || '');
+  const rx = /^FONTE_(\d+):\s*(.*?)\s*\|\s*(https?:\/\/\S+)\s*$/gim;
+  let m;
+  while ((m = rx.exec(text)) !== null) {
+    const name = cleanString(m[2] || 'Fonte', 120) || 'Fonte';
+    const url = safeHttpUrl(m[3]);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    out.push({ name, url });
+    if (out.length >= 5) break;
+  }
+
+  if (!out.length) {
+    const name = parseAiSearchField(text, 'FONTE');
+    const url = safeHttpUrl(parseAiSearchField(text, 'URL'));
+    if (url) out.push({ name: name || 'Fonte', url });
+  }
+  return out;
+}
+
 function looksLikeUsableChordSheet(text) {
   const raw = String(text || '').trim();
   if (!raw) return false;
 
-  // Nunca permita que avisos, tabelas de pesquisa ou explicações virem "cifra".
   const blocked = [
     /material protegido/i,
     /direitos autorais/i,
@@ -1323,7 +1346,6 @@ function looksLikeUsableChordSheet(text) {
     /nao (?:posso|e possivel|posso fornecer).*letra/i,
     /acordes principais encontrados/i,
     /artista\s*\/\s*vers[aã]o/i,
-    /https?:\/\//i,
     /^\s*\|.*\|\s*$/m,
     /orienta[cç][aã]o/i
   ];
@@ -1332,7 +1354,6 @@ function looksLikeUsableChordSheet(text) {
   const lines = raw.split(/\r?\n/).map(x => x.trimEnd()).filter(Boolean);
   if (lines.length < 4) return false;
 
-  // Conta tokens de acorde e linhas de letra. Não exige um formato específico de site.
   const chordToken = /(^|\s)(?:[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]*\))?(?:\/[A-G](?:#|b)?)?)(?=\s|$)/g;
   let chordCount = 0;
   let lyricLines = 0;
@@ -1342,7 +1363,7 @@ function looksLikeUsableChordSheet(text) {
     const withoutChords = line.replace(chordToken, ' ').replace(/[\[\](){}|_-]/g, ' ').trim();
     if (/[A-Za-zÀ-ÿ]{3,}/.test(withoutChords) && !/^(intro|verso|refr[aã]o|coro|ponte|final)\b/i.test(withoutChords)) lyricLines++;
   }
-  return chordCount >= 3 && lyricLines >= 3;
+  return chordCount >= 2 && lyricLines >= 3;
 }
 
 app.post('/api/ai/search', requireAuth, aiLimiter, async (req, res) => {
@@ -1350,30 +1371,37 @@ app.post('/api/ai/search', requireAuth, aiLimiter, async (req, res) => {
     const q = cleanString(req.body?.q, 300);
     if (!q) return res.status(400).json({ error: 'Digite o nome da musica.' });
 
-    const prompt = `Voce ajuda musicos a LOCALIZAR uma cifra na web para a busca: "${q}".
-Use a ferramenta de pesquisa na web.
+    const prompt = `Voce e um pesquisador musical para a busca: "${q}".
+Use a ferramenta de pesquisa na web e PESQUISE EM VARIAS FONTES DIFERENTES.
+NAO pare no primeiro resultado e NAO fique preso a um site especifico.
+Quando possivel, encontre de 3 a 5 paginas diferentes que correspondam a mesma musica/versao.
 
 OBJETIVO:
-1. Identifique corretamente titulo, artista/versao e tom quando a fonte informar.
-2. Se houver conteudo de cifra que possa ser fornecido integralmente, devolva uma cifra realmente utilizavel, com letra e acordes alinhados.
-3. Se nao puder fornecer a cifra completa, NAO escreva aviso de direitos autorais dentro da cifra. Retorne STATUS: REFERENCIA, com a melhor pagina-fonte encontrada.
-4. NUNCA invente letra ou acordes para completar uma musica.
-5. NUNCA devolva tabela Markdown, biografia, historia da musica ou lista de "acordes principais" no campo CIFRA.
+1. Confirmar titulo, artista/versao e tom usando mais de uma fonte quando possivel.
+2. Priorizar paginas de cifra/partitura musical relevantes, nao biografias ou paginas genericas.
+3. Se uma fonte permitir legitimamente reproduzir o conteudo integral (por exemplo, dominio publico ou licenca que permita), retorne STATUS: CIFRA e uma cifra utilizavel com letra e acordes alinhados.
+4. Caso contrario, retorne STATUS: REFERENCIA e liste as melhores fontes encontradas. Continue procurando outras fontes antes de concluir REFERENCIA.
+5. NUNCA invente letra, acordes ou tom.
+6. NUNCA coloque aviso de direitos autorais, tabela Markdown, biografia, historia da musica ou lista de acordes soltos dentro de CIFRA.
+7. Os links devem apontar diretamente para a pagina da musica, nao para a pagina inicial do site.
 
 FORMATO OBRIGATORIO:
 STATUS: CIFRA ou REFERENCIA
 TITULO: nome
 ARTISTA: artista/versao
 TOM: tom, se conhecido
-FONTE: nome do site/fonte
-URL: link direto da pagina encontrada, se houver
 MOTIVO: frase curta apenas quando STATUS for REFERENCIA
+FONTE_1: nome do site | https://link-direto
+FONTE_2: nome do site | https://link-direto
+FONTE_3: nome do site | https://link-direto
+FONTE_4: nome do site | https://link-direto
+FONTE_5: nome do site | https://link-direto
 CIFRA:
 [apenas a cifra completa quando STATUS for CIFRA; deixe vazio quando for REFERENCIA]`;
 
     const data = await callAnthropic({
       model: AI_MODEL,
-      max_tokens: 6500,
+      max_tokens: 7000,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     });
@@ -1385,16 +1413,15 @@ CIFRA:
     const title = parseAiSearchField(raw, 'TITULO') || q;
     const artist = parseAiSearchField(raw, 'ARTISTA');
     const tone = parseAiSearchField(raw, 'TOM');
-    const source = parseAiSearchField(raw, 'FONTE');
-    const url = safeHttpUrl(parseAiSearchField(raw, 'URL'));
     const reason = parseAiSearchField(raw, 'MOTIVO');
+    const sources = parseAiSearchSources(raw);
 
     const cifraMarker = raw.search(/^CIFRA:\s*$/im);
     const candidate = cifraMarker >= 0
       ? raw.slice(cifraMarker).replace(/^CIFRA:\s*/i, '').trim()
       : '';
 
-    const usable = requestedStatus === 'CIFRA' && looksLikeUsableChordSheet(candidate);
+    const usable = looksLikeUsableChordSheet(candidate) && requestedStatus !== 'REFERENCIA';
 
     if (usable) {
       return res.json({
@@ -1402,23 +1429,36 @@ CIFRA:
         title,
         artist,
         tone,
-        source,
-        url,
+        source: sources[0]?.name || '',
+        url: sources[0]?.url || '',
+        sources,
         text: candidate,
-        message: ''
+        message: sources.length > 1 ? `Cifra localizada após comparar ${sources.length} fontes.` : ''
       });
     }
 
-    // Falha segura: explicacoes da IA nunca mais entram no editor/apresentacao.
+    if (!sources.length) {
+      return res.json({
+        status: 'not_found',
+        title,
+        artist,
+        tone,
+        sources: [],
+        text: '',
+        message: reason || 'Não encontrei uma página de cifra confiável para esta busca. Tente incluir o nome do cantor ou da versão.'
+      });
+    }
+
     return res.json({
       status: 'reference',
       title,
       artist,
       tone,
-      source,
-      url,
+      source: sources[0]?.name || '',
+      url: sources[0]?.url || '',
+      sources,
       text: '',
-      message: reason || 'Encontrei a musica, mas nao uma cifra completa valida para importar automaticamente. Abra a fonte ou importe uma cifra que voce possui.'
+      message: reason || `Encontrei ${sources.length} fonte(s) para esta música. Escolha uma delas abaixo.`
     });
   } catch (err) {
     console.error('ai search', err.message);

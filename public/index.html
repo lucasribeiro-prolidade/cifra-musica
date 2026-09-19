@@ -96,9 +96,19 @@ textarea.editor{width:100%;background:transparent;border:none;padding:14px;color
 @keyframes spin{to{transform:rotate(360deg)}}
 .search-result{background:#1a2a1a;border:1px solid #2a4a2a;border-radius:12px;padding:14px;margin-bottom:12px;display:none}
 .search-result.on{display:block}
-.result-title{color:#86efac;font-weight:700;font-size:15px;margin-bottom:4px}
+.search-result.reference{background:#221f18;border-color:#4b4025}
+.result-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:5px}
+.result-title{color:#86efac;font-weight:700;font-size:15px;margin-bottom:2px}
+.search-result.reference .result-title{color:#f5c842}
+.result-badge{font-size:10px;line-height:1;padding:6px 8px;border-radius:999px;background:#12351e;color:#86efac;font-weight:800;white-space:nowrap}
+.search-result.reference .result-badge{background:#3a2e08;color:#f5c842}
 .result-meta{color:var(--dim);font-size:12px;margin-bottom:10px}
-.result-preview{font-family:var(--mono);font-size:12px;color:#aaa;max-height:100px;overflow:hidden;white-space:pre;border-top:1px solid #2a4a2a;padding-top:10px}
+.result-message{display:none;color:#d2c6ae;font-size:13px;line-height:1.5;border-top:1px solid #4b4025;padding-top:10px}
+.search-result.reference .result-message{display:block}
+.result-preview{font-family:var(--mono);font-size:12px;color:#aaa;max-height:140px;overflow:hidden;white-space:pre-wrap;border-top:1px solid #2a4a2a;padding-top:10px}
+.search-result.reference .result-preview{display:none}
+.result-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.result-actions .btn{flex:1;min-width:120px}
 
 /* import */
 .import-zone{width:100%;background:#1a2a1a;border:2px dashed #2a5a2a;border-radius:12px;padding:18px;color:#86efac;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;transition:background .2s}
@@ -1640,12 +1650,21 @@ main{max-width:760px}
     </div>
     <div class="search-loading" id="search-loading"><div class="spinner"></div><span id="loading-txt">Buscando...</span></div>
     <div class="search-result" id="search-result">
-      <div class="result-title" id="result-title"></div>
-      <div class="result-meta" id="result-meta"></div>
+      <div class="result-top">
+        <div>
+          <div class="result-title" id="result-title"></div>
+          <div class="result-meta" id="result-meta"></div>
+        </div>
+        <span class="result-badge" id="result-badge">Cifra</span>
+      </div>
+      <div class="result-message" id="result-message"></div>
       <div class="result-preview" id="result-preview"></div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn btn-gold" style="flex:1" onclick="useResult()">✓ Usar cifra</button>
-        <button class="btn btn-dark" style="flex:1" onclick="clearSearch()">Buscar outra</button>
+      <div class="result-actions">
+        <button class="btn btn-gold" id="use-search-result-btn" onclick="useResult()">✓ Usar cifra</button>
+        <button class="btn btn-dark" id="open-search-source-btn" style="display:none" onclick="openSearchSource()">🌐 Abrir fonte</button>
+        <button class="btn btn-dark" id="import-search-file-btn" style="display:none" onclick="openNewCifraMenu()">📷 Foto/PDF</button>
+        <button class="btn btn-dark" id="paste-search-btn" style="display:none" onclick="pasteFromSearch()">📋 Colar cifra</button>
+        <button class="btn btn-dark" onclick="clearSearch()">Buscar outra</button>
       </div>
     </div>
     <div id="no-api-box" style="display:none;background:#2a1f00;border:1px solid #5a4000;border-radius:12px;padding:24px;text-align:center">
@@ -2033,7 +2052,7 @@ function cleanCifra(text){
 // ══════════════════════════════════════════════════════
 // STATE / AUTH / NUVEM (RAILWAY + POSTGRESQL)
 // ══════════════════════════════════════════════════════
-let cifra="",st=0,edFs=14,library=[],lastResult="",currentCifraId=null,migrationBusy=false;
+let cifra="",st=0,edFs=14,library=[],lastResult="",lastSearchResult=null,currentCifraId=null,migrationBusy=false;
 const LKEY="cifras_igreja_v1";
 let currentUser=null,authMode="login",aiConfigured=false;
 let singers=[],currentSingerTones=[];
@@ -2838,43 +2857,105 @@ async function doSearch(){
   const q=document.getElementById("search-input").value.trim();
   if(!q){toast("Digite o nome da música!",1);return;}
   if(!aiConfigured){document.getElementById("no-api-box").style.display="";return;}
+
   document.getElementById("no-api-box").style.display="none";
-  document.getElementById("search-result").classList.remove("on");
+  const resultBox=document.getElementById("search-result");
+  resultBox.classList.remove("on","reference");
   document.getElementById("search-loading").classList.add("on");
   document.getElementById("search-btn").disabled=true;
-  document.getElementById("loading-txt").textContent="Buscando com IA...";
+  document.getElementById("loading-txt").textContent="Procurando música e cifra...";
+
   try{
     const data=await apiFetch("/api/ai/search",{method:"POST",body:JSON.stringify({q})});
+    const status=(data.status||"").toLowerCase()==="cifra"?"cifra":"reference";
+    const tit=(data.title||q).trim();
+    const art=(data.artist||"").trim();
+    const tom=(data.tone||"").trim();
     const txt=(data.text||"").trim();
-    if(!txt)throw new Error("Nenhum resultado encontrado.");
-    lastResult=txt;
-    const tit=(txt.match(/TITULO:\s*(.+)/i)||[])[1]?.trim()||q;
-    const art=(txt.match(/ARTISTA:\s*(.+)/i)||[])[1]?.trim()||"";
-    const tom=(txt.match(/TOM:\s*(.+)/i)||[])[1]?.trim()||"";
+
+    lastSearchResult=data;
+    lastResult=status==="cifra"?txt:"";
+
     document.getElementById("result-title").textContent=tit;
-    document.getElementById("result-meta").textContent=[art?"Artista: "+art:"",tom?"Tom: "+tom:""].filter(Boolean).join(" · ");
-    document.getElementById("result-preview").textContent=txt.replace(/TITULO:.+\n?/gi,"").replace(/ARTISTA:.+\n?/gi,"").replace(/TOM:.+\n?/gi,"").trim().split("\n").slice(0,12).join("\n");
-    if(!document.getElementById("song-title").value)document.getElementById("song-title").value=tit;
-    document.getElementById("search-result").classList.add("on");
-  }catch(e){toast(e.message||"Erro na busca.",1);}
-  finally{document.getElementById("search-loading").classList.remove("on");document.getElementById("search-btn").disabled=false;}
+    document.getElementById("result-meta").textContent=[art?"Artista: "+art:"",tom?"Tom: "+tom:"",data.source?"Fonte: "+data.source:""].filter(Boolean).join(" · ");
+
+    const badge=document.getElementById("result-badge");
+    const useBtn=document.getElementById("use-search-result-btn");
+    const sourceBtn=document.getElementById("open-search-source-btn");
+    const importBtn=document.getElementById("import-search-file-btn");
+    const pasteBtn=document.getElementById("paste-search-btn");
+    const message=document.getElementById("result-message");
+    const preview=document.getElementById("result-preview");
+
+    if(status==="cifra" && txt){
+      badge.textContent="Cifra encontrada";
+      resultBox.classList.remove("reference");
+      message.textContent="";
+      preview.textContent=txt.split("\n").slice(0,16).join("\n");
+      useBtn.style.display="";
+      sourceBtn.style.display=data.url?"":"none";
+      importBtn.style.display="none";
+      pasteBtn.style.display="none";
+      if(!document.getElementById("song-title").value)document.getElementById("song-title").value=tit;
+    }else{
+      badge.textContent="Referência encontrada";
+      resultBox.classList.add("reference");
+      message.textContent=data.message||"Encontrei a música, mas não uma cifra completa que possa ser importada automaticamente. Abra a fonte ou use uma cifra que você possui.";
+      preview.textContent="";
+      useBtn.style.display="none";
+      sourceBtn.style.display=data.url?"":"none";
+      importBtn.style.display="";
+      pasteBtn.style.display="";
+    }
+
+    resultBox.classList.add("on");
+  }catch(e){
+    toast(e.message||"Erro na busca.",1);
+  }finally{
+    document.getElementById("search-loading").classList.remove("on");
+    document.getElementById("search-btn").disabled=false;
+  }
 }
 
 function useResult(){
-  if(!lastResult)return;
-  const cleaned=lastResult.replace(/TITULO:.+\n?/gi,"").replace(/ARTISTA:.+\n?/gi,"").replace(/TOM:.+\n?/gi,"").trim();
-  currentCifraId=null;cifra=cleanCifra(cleaned);st=0;
+  if(!lastSearchResult || lastSearchResult.status!=="cifra" || !lastSearchResult.text){
+    toast("Esta busca não trouxe uma cifra completa para importar.",1);
+    return;
+  }
+  currentCifraId=null;
+  cifra=cleanCifra(lastSearchResult.text.trim());
+  st=0;
   document.getElementById("raw-input").value=cifra;
   document.getElementById("cifra-editor").value=cifra;
+  if(lastSearchResult.title)document.getElementById("song-title").value=lastSearchResult.title;
   switchTab("preview");
   toast("✓ Cifra carregada!");
 }
 
+function openSearchSource(){
+  const url=lastSearchResult?.url||"";
+  if(!/^https?:\/\//i.test(url)){
+    toast("A busca não retornou um link de fonte.",1);
+    return;
+  }
+  window.open(url,"_blank","noopener,noreferrer");
+}
+
+function pasteFromSearch(){
+  if(lastSearchResult?.title && !document.getElementById("song-title").value){
+    document.getElementById("song-title").value=lastSearchResult.title;
+  }
+  switchTab("editor");
+  setTimeout(()=>document.getElementById("raw-input")?.focus(),100);
+}
+
 function clearSearch(){
   document.getElementById("search-input").value="";
-  document.getElementById("search-result").classList.remove("on");
+  const resultBox=document.getElementById("search-result");
+  resultBox.classList.remove("on","reference");
   document.getElementById("no-api-box").style.display="none";
   lastResult="";
+  lastSearchResult=null;
 }
 
 

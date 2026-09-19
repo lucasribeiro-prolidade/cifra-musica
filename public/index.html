@@ -526,6 +526,183 @@ body:not(.auth-pending) .auth-screen{display:none}
 }
 
 
+/* v6.14 — Grupos simplificados + seleção múltipla da biblioteca */
+.group-tabs{
+  gap:8px;
+  padding:6px;
+  border-radius:16px;
+  margin-bottom:14px;
+}
+.group-tab{
+  min-height:56px;
+  border-radius:12px;
+  font-size:13px;
+  padding:10px 7px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.group-compact-stats{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+  padding:2px 2px 11px;
+}
+.group-card.clickable,.folder-card.clickable,.shared-song.clickable{
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.group-card.clickable:active,.folder-card.clickable:active,.shared-song.clickable:active{
+  background:#302a24;
+}
+.group-chevron{
+  flex:0 0 auto;
+  color:#d5b55d;
+  font-size:26px;
+  line-height:1;
+  padding:0 3px;
+}
+.repertoire-summary{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+  padding:0 2px;
+  color:#a99d8c;
+  font-size:11.5px;
+}
+.repertoire-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+.repertoire-action-btn{
+  min-height:48px;
+  border-radius:13px;
+  border:1px solid #57461f;
+  background:#302819;
+  color:#f4cf65;
+  font-size:12.5px;
+  font-weight:800;
+  padding:10px 12px;
+}
+.repertoire-action-btn.secondary{
+  border-color:#403a34;
+  background:#24211e;
+  color:#d5ccc1;
+}
+.library-picker{
+  display:none;
+  background:#24211e;
+  border:1px solid #4a4034;
+  border-radius:16px;
+  overflow:hidden;
+  margin-bottom:12px;
+}
+.library-picker.open{display:block}
+.library-picker-head{
+  padding:13px;
+  border-bottom:1px solid #3b352f;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.library-picker-head strong{color:#f1e8dc;font-size:13px}
+.library-picker-search{
+  width:calc(100% - 24px);
+  margin:11px 12px 8px;
+  background:#171614;
+  color:var(--text);
+  border:1px solid #403a34;
+  border-radius:11px;
+  padding:11px 12px;
+  font-size:12.5px;
+}
+.library-picker-tools{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:0 12px 9px;
+  font-size:10.5px;
+  color:#9d9285;
+}
+.library-picker-tools button{
+  border:0;
+  background:transparent;
+  color:#f2c95a;
+  font-weight:800;
+  padding:5px 0;
+}
+.library-picker-list{
+  max-height:46vh;
+  overflow:auto;
+  border-top:1px solid #38322c;
+  border-bottom:1px solid #38322c;
+}
+.group-library-check{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:12px;
+  border-bottom:1px solid #37312c;
+  cursor:pointer;
+  background:#211e1b;
+}
+.group-library-check:last-child{border-bottom:0}
+.group-library-check:has(input:checked){background:#302919}
+.group-library-check input{
+  width:21px;
+  height:21px;
+  accent-color:#e0ad36;
+  flex:0 0 auto;
+}
+.group-library-check-info{flex:1;min-width:0}
+.group-library-check-title{
+  color:#ece4d8;
+  font-weight:750;
+  font-size:13px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.group-library-check-meta{font-size:10.5px;color:#8f8579;margin-top:3px}
+.library-picker-footer{
+  padding:11px 12px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  background:#211e1b;
+}
+.library-picker-footer .btn{flex:1;min-height:44px}
+.group-song-count{
+  display:inline-flex;
+  min-width:22px;
+  height:22px;
+  border-radius:999px;
+  align-items:center;
+  justify-content:center;
+  background:#5b4515;
+  color:#ffd76e;
+  font-size:10px;
+  font-weight:900;
+  padding:0 7px;
+}
+@media(max-width:620px){
+  .group-tab{min-height:60px;font-size:13.5px}
+  .group-tabs{gap:6px}
+  .repertoire-actions{grid-template-columns:1fr}
+  .repertoire-action-btn{min-height:50px;font-size:13px}
+  .library-picker-list{max-height:42vh}
+  .group-card.clickable,.folder-card.clickable,.shared-song.clickable{min-height:68px}
+}
+
+
 /* v4.1 — home + visualização mobile-first */
 .home-header-btn{color:#f5c842;border-color:#5a4000;background:#2a1f00}
 .home-screen{display:none}
@@ -2371,14 +2548,16 @@ function renderGroupList(){
   groupView={mode:"list"};
   const body=document.getElementById("groups-body");
   const cards=groups.length?groups.map(g=>`
-    <div class="group-card">
+    <div class="group-card clickable" role="button" tabindex="0"
+         onclick="openGroup('${g.id}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openGroup('${g.id}')} ">
       <div class="group-group-icon">👥</div>
       <div class="group-card-info">
         <div class="group-name">${esc(g.name)}</div>
         <div class="group-meta">${Number(g.member_count||0)} integrante(s) · ${Number(g.repertoire_count||0)} pasta(s) · ${Number(g.song_count||0)} música(s)</div>
       </div>
       <span class="group-role ${groupRoleClass(g.role)}">${groupRoleLabel(g.role)}</span>
-      <button class="btn-sm group-primary-btn" onclick="openGroup('${g.id}')">Abrir</button>
+      <span class="group-chevron" aria-hidden="true">›</span>
     </div>`).join(""):`<div class="group-empty">Você ainda não participa de nenhum grupo.</div>`;
   body.innerHTML=`
     <div class="group-body-shell">
@@ -2459,16 +2638,18 @@ function renderGroupDetail(){
   let panel="";
   if(tab==="folders"){
     const folders=(d.repertoires||[]).length?(d.repertoires||[]).map(r=>`
-      <div class="folder-card">
+      <div class="folder-card clickable" role="button" tabindex="0"
+           onclick="openRepertoire('${r.id}')"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRepertoire('${r.id}')} ">
         <div class="group-folder-icon">📁</div>
         <div class="folder-info">
           <div class="folder-name">${esc(r.name)}</div>
           <div class="folder-meta">${Number(r.song_count||0)} música(s)${r.description?' · '+esc(r.description):''}</div>
         </div>
-        <button class="btn-sm group-primary-btn" onclick="openRepertoire('${r.id}')">Abrir</button>
-        ${canWrite?`<details class="item-more">
-          <summary>⋮</summary>
-          <div class="item-more-menu">
+        <span class="group-chevron" aria-hidden="true">›</span>
+        ${canWrite?`<details class="item-more" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
+          <summary onclick="event.stopPropagation()">⋮</summary>
+          <div class="item-more-menu" onclick="event.stopPropagation()">
             <button onclick="this.closest('details').removeAttribute('open');renameRepertoire('${r.id}')">✏️ Renomear</button>
             <button class="danger" onclick="this.closest('details').removeAttribute('open');deleteRepertoire('${r.id}')">🗑 Excluir pasta</button>
           </div>
@@ -2549,26 +2730,17 @@ function renderGroupDetail(){
   }
 
   const html=`<div class="group-body-shell">
-    <div class="group-intro">
-      <div class="group-intro-row">
-        <div class="group-intro-icon">👥</div>
-        <div class="group-intro-info">
-          <h3>${esc(g.name)}</h3>
-          <p>${esc(g.description||"Grupo compartilhado de músicas e repertórios.")}</p>
-        </div>
-        ${groupOptionsHtml(g,canAdmin)}
-      </div>
-      <div class="group-stats">
-        <span class="group-role ${groupRoleClass(g.role)}">${groupRoleLabel(g.role)}</span>
-        <span class="group-stat">${(d.members||[]).length} integrante(s)</span>
-        <span class="group-stat">${(d.repertoires||[]).length} pasta(s)</span>
-      </div>
+    <div class="group-compact-stats">
+      <span class="group-role ${groupRoleClass(g.role)}">${groupRoleLabel(g.role)}</span>
+      <span class="group-stat">${(d.members||[]).length} integrante(s)</span>
+      <span class="group-stat">${(d.repertoires||[]).length} pasta(s)</span>
+      <span style="margin-left:auto">${groupOptionsHtml(g,canAdmin)}</span>
     </div>
 
     <div class="group-tabs">
-      <button class="group-tab ${tab==="folders"?"active":""}" onclick="setGroupTab('folders')">📁 Pastas</button>
-      <button class="group-tab ${tab==="members"?"active":""}" onclick="setGroupTab('members')">👥 Integrantes</button>
-      <button class="group-tab ${tab==="activity"?"active":""}" onclick="setGroupTab('activity')">🕘 Atividade</button>
+      <button class="group-tab ${tab==="folders"?"active":""}" onclick="setGroupTab('folders')">📁 <span>Pastas</span></button>
+      <button class="group-tab ${tab==="members"?"active":""}" onclick="setGroupTab('members')">👥 <span>Integrantes</span></button>
+      <button class="group-tab ${tab==="activity"?"active":""}" onclick="setGroupTab('activity')">🕘 <span>Atividade</span></button>
     </div>
 
     ${panel}
@@ -2666,46 +2838,115 @@ async function openRepertoire(id,silent=false){
 function renderRepertoire(){
   const r=groupView.repertoire,items=groupView.sharedItems||[];if(!r)return;
   setGroupHeader(`📁 ${r.name}`,true);
-  const opts=library.map(x=>`<option value="${x.id}">${esc(x.title)}${x.tone?' · '+x.tone:''}</option>`).join("");
-  const add=r.can_write?`<details class="group-list-create repertoire-add">
-    <summary>＋ Adicionar música</summary>
-    <div class="group-add-form">
-      <select class="group-lib-select" id="group-library-select">
-        <option value="">Da minha biblioteca...</option>${opts}
-      </select>
-      <button class="btn-sm group-primary-btn" onclick="addLibraryCifraToRepertoire()">Adicionar</button>
-      <button class="btn-sm" onclick="newSongForRepertoire()">Criar nova</button>
+
+  const existingIds=new Set(items.map(x=>String(x.id)));
+  const available=library.filter(x=>!existingIds.has(String(x.id)));
+  const pickerRows=available.length?available.map(x=>`
+    <label class="group-library-check" data-search="${esc((x.title||'')+' '+(x.tone||''))}">
+      <input type="checkbox" class="group-library-checkbox" value="${esc(x.id)}" onchange="updateGroupLibrarySelection()">
+      <div class="group-library-check-info">
+        <div class="group-library-check-title">${esc(x.title||'Sem título')}</div>
+        <div class="group-library-check-meta">${x.tone?'Tom '+esc(x.tone)+' · ':''}${x.singers?.length?esc(x.singers.map(s=>s.name+(s.tone?' ('+s.tone+')':'')).join(' · ')):'Minha biblioteca'}</div>
+      </div>
+    </label>`).join(''):`<div class="group-empty">Todas as músicas da sua biblioteca já estão nesta pasta.</div>`;
+
+  const add=r.can_write?`
+    <div class="repertoire-actions">
+      <button class="repertoire-action-btn" onclick="toggleGroupLibraryPicker()">＋ Adicionar da biblioteca</button>
+      <button class="repertoire-action-btn secondary" onclick="newSongForRepertoire()">✏️ Criar nova música</button>
     </div>
-  </details>`:"";
+    <div class="library-picker" id="group-library-picker">
+      <div class="library-picker-head">
+        <strong>Escolha várias músicas</strong>
+        <button class="btn-sm" onclick="toggleGroupLibraryPicker(false)">✕ Fechar</button>
+      </div>
+      <input class="library-picker-search" id="group-library-search" placeholder="Buscar na minha biblioteca..." oninput="filterGroupLibraryPicker(this.value)">
+      <div class="library-picker-tools">
+        <span id="group-library-count">0 selecionada(s)</span>
+        <button onclick="toggleVisibleGroupLibrary(true)">Selecionar visíveis</button>
+      </div>
+      <div class="library-picker-list" id="group-library-list">${pickerRows}</div>
+      <div class="library-picker-footer">
+        <button class="btn btn-dark" onclick="toggleVisibleGroupLibrary(false)">Limpar</button>
+        <button class="btn btn-gold" id="group-add-selected-btn" onclick="addSelectedLibraryToRepertoire()" disabled>Adicionar <span class="group-song-count" id="group-add-selected-count">0</span></button>
+      </div>
+    </div>`:"";
+
   const songs=items.length?items.map(x=>`
-    <div class="shared-song">
+    <div class="shared-song clickable" role="button" tabindex="0"
+         onclick="openSharedSong('${x.id}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSharedSong('${x.id}')} ">
       <div class="shared-info">
         <div class="shared-title">${esc(x.title)}</div>
         <div class="shared-meta">${x.tone?'Tom base: '+esc(x.tone)+' · ':''}<span class="shared-owner">${esc(x.owner_name||x.owner_email||'Integrante')}</span>
           ${x.singers?.length?`<div class="singer-line">🎤 ${x.singers.map(s=>esc(s.name)+(s.tone?' ('+esc(s.tone)+')':'')).join(' · ')}</div>`:''}
         </div>
       </div>
-      <button class="btn-sm group-primary-btn" onclick="openSharedSong('${x.id}')">${x.can_edit?'Abrir':'Visualizar'}</button>
-      ${r.can_write?`<details class="item-more">
-        <summary>⋮</summary>
-        <div class="item-more-menu">
+      <span class="group-chevron" aria-hidden="true">›</span>
+      ${r.can_write?`<details class="item-more" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
+        <summary onclick="event.stopPropagation()">⋮</summary>
+        <div class="item-more-menu" onclick="event.stopPropagation()">
           <button class="danger" onclick="this.closest('details').removeAttribute('open');removeCifraFromRepertoire('${x.id}')">Remover da pasta</button>
         </div>
       </details>`:""}
     </div>`).join(""):`<div class="group-empty">Nenhuma música nesta pasta ainda.</div>`;
 
   document.getElementById("groups-body").innerHTML=`<div class="group-body-shell">
-    <div class="repertoire-hero">
-      <div class="group-folder-icon">📁</div>
-      <div class="folder-info">
-        <div class="folder-name">${esc(r.name)}</div>
-        <div class="folder-meta">${esc(r.group_name)} · ${items.length} música(s)</div>
-      </div>
+    <div class="repertoire-summary">
+      <span>${esc(r.group_name)}</span>
+      <span>·</span>
+      <span>${items.length} música(s)</span>
       <span class="group-role ${groupRoleClass(r.role)}">${groupRoleLabel(r.role)}</span>
     </div>
     ${add}
     <div class="group-panel"><div class="group-list">${songs}</div></div>
   </div>`;
+}
+
+function toggleGroupLibraryPicker(force){
+  const el=document.getElementById('group-library-picker');if(!el)return;
+  const open=force===undefined?!el.classList.contains('open'):!!force;
+  el.classList.toggle('open',open);
+  if(open)setTimeout(()=>document.getElementById('group-library-search')?.focus(),60);
+}
+function filterGroupLibraryPicker(value){
+  const q=norm(value||'');
+  document.querySelectorAll('#group-library-list .group-library-check').forEach(row=>{
+    row.style.display=!q||norm(row.dataset.search||'').includes(q)?'':'none';
+  });
+}
+function updateGroupLibrarySelection(){
+  const selected=[...document.querySelectorAll('.group-library-checkbox:checked')];
+  const n=selected.length;
+  const count=document.getElementById('group-library-count');if(count)count.textContent=n+' selecionada(s)';
+  const badge=document.getElementById('group-add-selected-count');if(badge)badge.textContent=String(n);
+  const btn=document.getElementById('group-add-selected-btn');if(btn)btn.disabled=n===0;
+}
+function toggleVisibleGroupLibrary(checked){
+  document.querySelectorAll('#group-library-list .group-library-check').forEach(row=>{
+    if(row.style.display==='none')return;
+    const cb=row.querySelector('.group-library-checkbox');if(cb)cb.checked=!!checked;
+  });
+  updateGroupLibrarySelection();
+}
+async function addSelectedLibraryToRepertoire(){
+  const r=groupView.repertoire;if(!r?.can_write)return;
+  const ids=[...document.querySelectorAll('.group-library-checkbox:checked')].map(x=>x.value);
+  if(!ids.length)return toast('Selecione pelo menos uma música.',1);
+  const btn=document.getElementById('group-add-selected-btn');
+  if(btn){btn.disabled=true;btn.textContent='Adicionando '+ids.length+'...';}
+  let added=0,skipped=0;
+  for(const id of ids){
+    try{
+      await apiFetch(`/api/repertoires/${r.id}/cifras`,{method:'POST',body:JSON.stringify({cifra_id:id})});
+      added++;
+    }catch(e){
+      if(/já está|ja esta/i.test(e.message||''))skipped++;else{console.warn('add repertoire song',e);skipped++;}
+    }
+  }
+  await loadLib();
+  await openRepertoire(r.id);
+  toast(added?`✓ ${added} música(s) adicionada(s)${skipped?' · '+skipped+' ignorada(s)':''}.`:'Nenhuma música nova foi adicionada.',!added);
 }
 async function addLibraryCifraToRepertoire(){
   const id=document.getElementById("group-library-select")?.value;

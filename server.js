@@ -1421,7 +1421,9 @@ CIFRA:
       ? raw.slice(cifraMarker).replace(/^CIFRA:\s*/i, '').trim()
       : '';
 
-    const usable = looksLikeUsableChordSheet(candidate) && requestedStatus !== 'REFERENCIA';
+    // Se a IA realmente devolveu uma cifra utilizável, aceita o conteúdo mesmo que
+    // o rótulo STATUS venha inconsistente. O conteúdo passa pela validação estrutural.
+    const usable = looksLikeUsableChordSheet(candidate);
 
     if (usable) {
       return res.json({

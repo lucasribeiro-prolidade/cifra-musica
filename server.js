@@ -1371,96 +1371,100 @@ app.post('/api/ai/search', requireAuth, aiLimiter, async (req, res) => {
     const q = cleanString(req.body?.q, 300);
     if (!q) return res.status(400).json({ error: 'Digite o nome da musica.' });
 
-    const prompt = `Voce e um pesquisador musical para a busca: "${q}".
-Use a ferramenta de pesquisa na web e PESQUISE EM VARIAS FONTES DIFERENTES.
-NAO pare no primeiro resultado e NAO fique preso a um site especifico.
-Quando possivel, encontre de 3 a 5 paginas diferentes que correspondam a mesma musica/versao.
+    // v6.10 — volta ao fluxo simples da versão inicial:
+    // buscar -> encontrar a cifra -> organizar -> devolver pronta.
+    // A chave continua protegida no servidor.
+    const prompt = `Você é especialista em cifras musicais para músicos.
+
+Busque na web uma cifra COMPLETA e utilizável da música: "${q}".
+
+PESQUISA:
+- Pesquise em VÁRIAS fontes de cifras e música, não apenas em um site.
+- Você pode consultar Cifra Club, Cifras.com.br, Banana Cifras e outras fontes relevantes encontradas na web.
+- Não pare no primeiro resultado: confirme que é a música/versão correta.
+- Se a busca informar cantor/versão, respeite essa versão. Se não informar, priorize a versão mais conhecida/original.
 
 OBJETIVO:
-1. Confirmar titulo, artista/versao e tom usando mais de uma fonte quando possivel.
-2. Priorizar paginas de cifra/partitura musical relevantes, nao biografias ou paginas genericas.
-3. Se uma fonte permitir legitimamente reproduzir o conteudo integral (por exemplo, dominio publico ou licenca que permita), retorne STATUS: CIFRA e uma cifra utilizavel com letra e acordes alinhados.
-4. Caso contrario, retorne STATUS: REFERENCIA e liste as melhores fontes encontradas. Continue procurando outras fontes antes de concluir REFERENCIA.
-5. NUNCA invente letra, acordes ou tom.
-6. NUNCA coloque aviso de direitos autorais, tabela Markdown, biografia, historia da musica ou lista de acordes soltos dentro de CIFRA.
-7. Os links devem apontar diretamente para a pagina da musica, nao para a pagina inicial do site.
+- Entregar a cifra já limpa e pronta para tocar no aplicativo.
+- Preserve os acordes exatamente como encontrados.
+- Preserve o posicionamento dos acordes em relação às palavras/sílabas.
+- Organize acordes em linhas acima da letra, mantendo espaços e quebras de linha.
+- Preserve estrofes, refrões, pontes e introduções quando existirem.
+- Remova anúncios, menus, links, biografias, comentários, tablaturas desnecessárias e textos que não façam parte da cifra.
+- Não invente letra, acordes ou tom.
 
-FORMATO OBRIGATORIO:
-STATUS: CIFRA ou REFERENCIA
-TITULO: nome
-ARTISTA: artista/versao
-TOM: tom, se conhecido
-MOTIVO: frase curta apenas quando STATUS for REFERENCIA
-FONTE_1: nome do site | https://link-direto
-FONTE_2: nome do site | https://link-direto
-FONTE_3: nome do site | https://link-direto
-FONTE_4: nome do site | https://link-direto
-FONTE_5: nome do site | https://link-direto
-CIFRA:
-[apenas a cifra completa quando STATUS for CIFRA; deixe vazio quando for REFERENCIA]`;
+RETORNE SOMENTE neste formato:
+TITULO: [nome da música]
+ARTISTA: [artista/versão]
+TOM: [tom]
+
+[cifra completa e organizada]
+
+NÃO retorne lista de fontes, links, tabela, explicações, avisos ou texto sobre direitos autorais.
+Se não conseguir obter uma cifra completa e utilizável depois de pesquisar várias fontes, retorne apenas:
+ERRO: Não encontrei uma cifra completa para esta música.`;
 
     const data = await callAnthropic({
       model: AI_MODEL,
-      max_tokens: 7000,
+      max_tokens: 8000,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     });
 
-    const raw = anthropicText(data);
+    let raw = anthropicText(data).trim();
     if (!raw) throw new Error('Nenhum resultado encontrado.');
 
-    const requestedStatus = parseAiSearchField(raw, 'STATUS').toUpperCase();
+    if (/^ERRO\s*:/i.test(raw)) {
+      return res.status(404).json({
+        error: 'Não consegui encontrar uma cifra completa. Tente informar também o cantor ou a versão.'
+      });
+    }
+
     const title = parseAiSearchField(raw, 'TITULO') || q;
     const artist = parseAiSearchField(raw, 'ARTISTA');
     const tone = parseAiSearchField(raw, 'TOM');
-    const reason = parseAiSearchField(raw, 'MOTIVO');
-    const sources = parseAiSearchSources(raw);
 
-    const cifraMarker = raw.search(/^CIFRA:\s*$/im);
-    const candidate = cifraMarker >= 0
-      ? raw.slice(cifraMarker).replace(/^CIFRA:\s*/i, '').trim()
-      : '';
+    // Remove apenas o cabeçalho de metadados. O restante é a cifra.
+    let text = raw
+      .replace(/^```(?:text|txt|markdown)?\s*$/gim, '')
+      .replace(/^```\s*$/gim, '')
+      .replace(/^TITULO:\s*.*$/gim, '')
+      .replace(/^ARTISTA:\s*.*$/gim, '')
+      .replace(/^TOM:\s*.*$/gim, '')
+      .replace(/^CIFRA:\s*$/gim, '')
+      .replace(/^STATUS:\s*.*$/gim, '')
+      .replace(/^MOTIVO:\s*.*$/gim, '')
+      .replace(/^FONTE(?:_\d+)?:\s*.*$/gim, '')
+      .replace(/^URL:\s*.*$/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
-    // Se a IA realmente devolveu uma cifra utilizável, aceita o conteúdo mesmo que
-    // o rótulo STATUS venha inconsistente. O conteúdo passa pela validação estrutural.
-    const usable = looksLikeUsableChordSheet(candidate);
-
-    if (usable) {
-      return res.json({
-        status: 'cifra',
-        title,
-        artist,
-        tone,
-        source: sources[0]?.name || '',
-        url: sources[0]?.url || '',
-        sources,
-        text: candidate,
-        message: sources.length > 1 ? `Cifra localizada após comparar ${sources.length} fontes.` : ''
+    // A versão antiga aceitava praticamente qualquer resposta. Aqui mantemos
+    // apenas uma proteção mínima para impedir que uma explicação vire cifra.
+    const refusalOrExplanation = /(?:direitos autorais|material protegido|copyright|não posso fornecer|nao posso fornecer|não é possível fornecer|nao e possivel fornecer|acordes principais encontrados|artista\s*\/\s*vers[aã]o)/i;
+    if (!text || text.length < 60 || refusalOrExplanation.test(text)) {
+      return res.status(404).json({
+        error: 'Encontrei referências da música, mas não uma cifra completa para carregar. Tente informar também o cantor ou outra versão.'
       });
     }
 
-    if (!sources.length) {
-      return res.json({
-        status: 'not_found',
-        title,
-        artist,
-        tone,
-        sources: [],
-        text: '',
-        message: reason || 'Não encontrei uma página de cifra confiável para esta busca. Tente incluir o nome do cantor ou da versão.'
+    // Validação leve: precisa parecer conteúdo musical, sem a rigidez da v6.7/v6.8.
+    const lines = text.split(/\r?\n/).filter(x => x.trim());
+    const chordRx = /(?:^|\s)[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]*\))?(?:\/[A-G](?:#|b)?)?(?=\s|$)/g;
+    const chordCount = (text.match(chordRx) || []).length;
+    const lyricCount = lines.filter(line => /[A-Za-zÀ-ÿ]{3,}/.test(line) && !/^\s*[A-G](?:#|b)?(?:\S*\s+)*$/i.test(line)).length;
+    if (lines.length < 4 || chordCount < 1 || lyricCount < 2) {
+      return res.status(404).json({
+        error: 'Não consegui montar uma cifra completa desta busca. Tente incluir o nome do cantor ou da versão.'
       });
     }
 
-    return res.json({
-      status: 'reference',
+    res.json({
+      status: 'cifra',
       title,
       artist,
       tone,
-      source: sources[0]?.name || '',
-      url: sources[0]?.url || '',
-      sources,
-      text: '',
-      message: reason || `Encontrei ${sources.length} fonte(s) para esta música. Escolha uma delas abaixo.`
+      text
     });
   } catch (err) {
     console.error('ai search', err.message);

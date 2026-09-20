@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="theme-light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#111013">
+<meta name="theme-color" content="#f5efe6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cifra-Musica">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1512,6 +1512,213 @@ main{max-width:760px}
 .scroll-speed-label{font-size:10px;color:#a99d8c;white-space:nowrap}
 @media(max-width:520px){.pres-controls{gap:7px;padding:8px 9px calc(8px + env(safe-area-inset-bottom))}.scroll-speed-wrap{order:2;flex-basis:100%;max-width:none;min-width:0;padding:8px 9px}.scroll-speed-label{display:none}}
 
+
+
+/* v6.18 — tema claro suave como padrão; escuro continua opcional */
+html.theme-light{
+  color-scheme:light;
+  --bg:#f5efe6;
+  --surface:#fffdf9;
+  --surface2:#f8f2e9;
+  --border:#ded4c6;
+  --border2:#e9e0d5;
+  --text:#342f2a;
+  --muted:#766d63;
+  --dim:#9a9084;
+  --dim2:#d2c9bd;
+  --gold:#d9a238;
+  --gold2:#8b6119;
+}
+html.theme-light body{
+  background:
+    radial-gradient(circle at top,rgba(217,162,56,.09),transparent 34%),
+    linear-gradient(180deg,#faf6f0 0%,#f1eae0 100%);
+  color:var(--text);
+}
+html.theme-light header{
+  background:rgba(255,252,247,.96);
+  border-bottom-color:#e3d9cc;
+  box-shadow:0 7px 20px rgba(87,68,45,.07);
+}
+html.theme-light .logo-icon{color:#3b2a0b;box-shadow:0 4px 14px rgba(201,146,37,.16)}
+html.theme-light .logo-sub{color:#968b7f}
+html.theme-light .btn-dark,
+html.theme-light .btn-sm,
+html.theme-light .mobile-head-btn,
+html.theme-light .tone-select,
+html.theme-light .singer-select,
+html.theme-light .singer-tone-select{
+  background:#fffaf3;
+  border-color:#ddd2c4;
+  color:#655d54;
+}
+html.theme-light .btn-dark:hover,
+html.theme-light .btn-sm:hover{background:#f6eee3}
+html.theme-light .card,
+html.theme-light .preview-box,
+html.theme-light .search-box,
+html.theme-light .transpose-bar,
+html.theme-light .singer-card,
+html.theme-light .group-card,
+html.theme-light .admin-stat,
+html.theme-light .admin-user,
+html.theme-light .drawer,
+html.theme-light .modal,
+html.theme-light .auth-card,
+html.theme-light .home-card,
+html.theme-light .group-body-shell,
+html.theme-light .group-panel,
+html.theme-light .group-list-create,
+html.theme-light .repertoire-hero,
+html.theme-light .shared-song,
+html.theme-light .group-folder-card,
+html.theme-light .group-member-card,
+html.theme-light .help-panel,
+html.theme-light .new-cifra-panel,
+html.theme-light .scan-panel,
+html.theme-light .save-singer-panel{
+  background:#fffdf9;
+  border-color:#ded4c6;
+  box-shadow:0 8px 22px rgba(86,67,44,.07);
+}
+html.theme-light .card-hdr,
+html.theme-light .preview-box,
+html.theme-light .search-input,
+html.theme-light textarea.editor,
+html.theme-light .title-input,
+html.theme-light .auth-field input,
+html.theme-light .group-lib-select,
+html.theme-light .group-add-form input,
+html.theme-light .group-add-form select,
+html.theme-light .save-singer-field select{
+  background:#faf6ef;
+  border-color:#e2d8ca;
+  color:#342f2a;
+}
+html.theme-light .title-input::placeholder,
+html.theme-light .search-input::placeholder{color:#aaa095}
+html.theme-light .preview-label{color:#9c9185}
+html.theme-light .cifra-display .lyric-line{color:#342f2a}
+html.theme-light .section-label{color:#91671f}
+html.theme-light .chord-abs{color:#b84036}
+html.theme-light .home-welcome{
+  background:linear-gradient(155deg,#fffaf1,#f5ecdf);
+  border-color:#e1d3c0;
+  box-shadow:0 10px 28px rgba(91,70,43,.07);
+}
+html.theme-light .home-welcome p,
+html.theme-light .home-card-sub{color:#7d7266}
+html.theme-light .home-card{
+  background:linear-gradient(180deg,#fffdf9,#f8f1e7);
+  border-color:#dfd4c7;
+}
+html.theme-light .home-card:hover{background:#fff9f0;border-color:#ceb98f}
+html.theme-light .home-current{
+  background:#eef4fb;
+  border-color:#cbdbea;
+  color:#46586d;
+}
+html.theme-light .mobile-nav-sheet,
+html.theme-light .drawer{
+  background:#faf6ef;
+  color:#342f2a;
+}
+html.theme-light .mobile-nav-top{border-color:#e0d6ca}
+html.theme-light .mobile-nav-user strong{color:#342f2a}
+html.theme-light .mobile-nav-user span{color:#84796d}
+html.theme-light .mobile-nav-card{
+  background:#fffdf9;
+  border-color:#ddd2c5;
+}
+html.theme-light .mobile-nav-card strong{color:#3d3731}
+html.theme-light .mobile-nav-card small{color:#81766b}
+html.theme-light .mobile-nav-close{background:#f4ece1;color:#6e645a;border-color:#ded3c5}
+html.theme-light .group-drawer .drawer-body,
+html.theme-light .group-list-cards,
+html.theme-light .group-card,
+html.theme-light .folder-card,
+html.theme-light .shared-song,
+html.theme-light .group-library-check{
+  background:#fffdf9;
+  border-color:#ded4c6;
+}
+html.theme-light .group-card:hover,
+html.theme-light .folder-card:hover,
+html.theme-light .shared-song:hover{background:#faf3e8}
+html.theme-light .group-tab,
+html.theme-light .group-create-toggle,
+html.theme-light .group-add-details>summary,
+html.theme-light .item-more>summary{
+  background:#f7f0e6;
+  color:#6d6258;
+  border-color:#ded4c6;
+}
+html.theme-light .group-tab.active{background:#f1dfb8;color:#715016;border-color:#d5b66c}
+html.theme-light .item-more-menu{background:#fffaf3;border-color:#ddd1c3;box-shadow:0 12px 30px rgba(74,58,39,.14)}
+html.theme-light .item-more-menu button{color:#5f574f}
+html.theme-light .scroll-speed-wrap{background:#fffaf3;border-color:#d9cebf}
+html.theme-light .scroll-speed-wrap .edge,
+html.theme-light .scroll-speed-label{color:#786f65}
+html.theme-light .toast{box-shadow:0 8px 22px rgba(58,46,31,.12)}
+html.theme-light .preview-actions{
+  background:rgba(255,252,247,.95);
+  box-shadow:0 8px 28px rgba(84,66,43,.12);
+}
+html.theme-light .save-singer-head h3{color:#3a342f}
+html.theme-light .save-singer-head p,
+html.theme-light .save-singer-field label,
+html.theme-light .save-singer-current{color:#7c7165}
+html.theme-light .save-singer-current{background:#faf4eb;border-color:#e0d5c8}
+html.theme-light .save-singer-close{background:#f5eee4;color:#6d6359;border-color:#ddd2c4}
+html.theme-light .auth-tabs{background:#f2eadf}
+html.theme-light .auth-tab{color:#74695e}
+html.theme-light .auth-tab.active{background:#fffdf9;color:#7b5717}
+
+/* Apresentação clara suave. O escuro pode ser ativado pelo botão no topo. */
+#presentation.pres-light{background:#f2e9dd;color:#302b26}
+#presentation.pres-light .pres-top{
+  background:linear-gradient(180deg,#fffaf3,#f1e6d8);
+  border-bottom-color:#d9ccbc;
+  box-shadow:0 6px 16px rgba(80,61,39,.08);
+}
+#presentation.pres-light .pres-title{color:#765118}
+#presentation.pres-light .pres-content{
+  background:
+    radial-gradient(circle at top,rgba(200,149,49,.07),transparent 30%),
+    linear-gradient(180deg,#fbf6ee 0%,#f2e9dc 100%);
+}
+#presentation.pres-light .pres-controls{
+  background:linear-gradient(180deg,#f4eadf,#eadfD1);
+  border-top-color:#d7c9b8;
+}
+#presentation.pres-light .cifra-display .lyric-line,
+#presentation.pres-light .lyric-line{color:#302b26}
+#presentation.pres-light .chord-abs,
+#presentation.pres-light .chord-row{color:#b43f36}
+#presentation.pres-light .section-label{color:#8b621c}
+#presentation.pres-light .pres-font-btn,
+#presentation.pres-light .btn-sm,
+#presentation.pres-light .spd-btn{
+  background:#fffaf3;
+  color:#655c52;
+  border:1px solid #d9ccbc;
+}
+#presentation.pres-light .scroll-speed-wrap{background:#fffaf3;border-color:#d9ccbc}
+#presentation.pres-light .scroll-speed-wrap .edge,
+#presentation.pres-light .scroll-speed-label{color:#746b61}
+#presentation.pres-light .scroll-speed-value{background:#dca73d;color:#35260b}
+#presentation.pres-light .scroll-btn{box-shadow:0 5px 14px rgba(194,141,36,.16)}
+#presentation.pres-light.harpa-mode{background:#f2e9dd}
+#presentation.pres-light.harpa-mode .pres-top{background:linear-gradient(180deg,#fffaf3,#f0e5d7);border-color:#d9ccbc}
+#presentation.pres-light.harpa-mode .pres-content{background:linear-gradient(180deg,#fbf6ee,#f1e8db)}
+#presentation.pres-light.harpa-mode .pres-controls{background:linear-gradient(180deg,#f4eadf,#e9ddcf);border-color:#d7c9b8}
+#presentation.pres-light.harpa-mode .lyric-line{color:#302b26}
+#presentation.pres-light.harpa-mode .harpa-coro .lyric-line{color:#211d19;font-style:italic;font-weight:850}
+#presentation.pres-light.harpa-mode .section-label{color:#8b621c}
+
+.theme-toggle-btn{white-space:nowrap}
+@media(max-width:760px){.desktop-theme-label{display:none}}
+
 </style>
 </head>
 <body class="auth-pending">
@@ -1555,6 +1762,7 @@ main{max-width:760px}
     <div class="user-menu">
       <span class="cloud-chip" title="Sincronizado na nuvem"><span class="cloud-dot"></span> Nuvem</span>
       <button class="btn-sm home-header-btn" onclick="goHome()" title="Tela inicial">🏠 <span class="home-label">Início</span></button>
+      <button class="btn-sm theme-toggle-btn" id="theme-toggle-btn" onclick="toggleAppTheme()" title="Trocar tema">🌙 <span class="desktop-theme-label">Escuro</span></button>
       <span class="user-chip" id="user-chip"></span>
       <button class="btn-sm admin-btn" id="admin-btn" onclick="openAdmin()" title="Administrar usuários">👑 Admin</button>
       <button class="btn-sm" onclick="logoutUser()" title="Sair">Sair</button>
@@ -1611,6 +1819,11 @@ main{max-width:760px}
       <button class="mobile-nav-card" onclick="closeMobileNav();openLibrary()">
         <span class="mi">📚</span>
         <span><strong>Biblioteca</strong><small>Suas cifras salvas na nuvem.</small></span>
+      </button>
+
+      <button class="mobile-nav-card" id="mobile-theme-card" onclick="toggleAppTheme()">
+        <span class="mi" id="mobile-theme-icon">🌙</span>
+        <span><strong id="mobile-theme-title">Tema escuro</strong><small id="mobile-theme-sub">Usar aparência escura.</small></span>
       </button>
 
       <button class="mobile-nav-card help" onclick="closeMobileNav();openHelp()">
@@ -2068,6 +2281,7 @@ main{max-width:760px}
     </button>
     <span class="pres-title" id="pres-title">Apresentação</span>
     <div style="display:flex;gap:6px">
+      <button class="pres-font-btn" id="pres-theme-switch" onclick="togglePresentationTheme()" title="Trocar fundo">🌙</button>
       <button class="pres-font-btn" onclick="presFontSize(-2)">A-</button>
       <button class="pres-font-btn" onclick="presFontSize(2)">A+</button>
     </div>
@@ -4580,6 +4794,51 @@ main{max-width:760px}
   doc.close();
 }
 
+
+// ══════════════════════════════════════════════════════
+// v6.18 — APARÊNCIA CLARA / ESCURA
+// Claro é o padrão. A preferência fica salva neste aparelho.
+// ══════════════════════════════════════════════════════
+function getAppTheme(){
+  return document.documentElement.classList.contains("theme-dark")?"dark":"light";
+}
+function updateThemeControls(){
+  const dark=getAppTheme()==="dark";
+  const btn=document.getElementById("theme-toggle-btn");
+  if(btn)btn.innerHTML=(dark?'☀️ <span class="desktop-theme-label">Claro</span>':'🌙 <span class="desktop-theme-label">Escuro</span>');
+  const mi=document.getElementById("mobile-theme-icon");if(mi)mi.textContent=dark?'☀️':'🌙';
+  const mt=document.getElementById("mobile-theme-title");if(mt)mt.textContent=dark?'Tema claro':'Tema escuro';
+  const ms=document.getElementById("mobile-theme-sub");if(ms)ms.textContent=dark?'Voltar para o padrão claro.':'Usar aparência escura.';
+  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#161514':'#f5efe6';
+}
+function applyAppTheme(theme,persist=false){
+  const dark=theme==="dark";
+  document.documentElement.classList.toggle("theme-dark",dark);
+  document.documentElement.classList.toggle("theme-light",!dark);
+  if(persist)localStorage.setItem("cifra_theme",dark?"dark":"light");
+  updateThemeControls();
+}
+function toggleAppTheme(){
+  applyAppTheme(getAppTheme()==="dark"?"light":"dark",true);
+}
+function getPresentationTheme(){
+  return localStorage.getItem("cifra_pres_theme") || getAppTheme();
+}
+function applyPresentationTheme(theme=getPresentationTheme()){
+  const light=theme!=="dark";
+  const p=document.getElementById("presentation");
+  if(p)p.classList.toggle("pres-light",light);
+  const b=document.getElementById("pres-theme-switch");
+  if(b)b.textContent=light?'🌙':'☀️';
+}
+function togglePresentationTheme(){
+  const p=document.getElementById("presentation");
+  const light=!!p?.classList.contains("pres-light");
+  const next=light?"dark":"light";
+  localStorage.setItem("cifra_pres_theme",next);
+  applyPresentationTheme(next);
+}
+
 // ══════════════════════════════════════════════════════
 // PRESENTATION
 // ══════════════════════════════════════════════════════
@@ -4598,6 +4857,7 @@ async function openPresentation(){
   const isHarpa=isSavedHarpa();
   const p=document.getElementById("presentation");
   p.classList.toggle("harpa-mode",isHarpa);
+  applyPresentationTheme();
   const singer=currentSingerTones?.[0];
   const singerInfo=singer?` · 🎤 ${singer.name||"Cantor"}${singer.tone?" · "+singer.tone:""}`:"";
   document.getElementById("pres-title").textContent=title+singerInfo;
@@ -4762,6 +5022,7 @@ function toast(msg,err=0){
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
+applyAppTheme(localStorage.getItem("cifra_theme")||"light");
 updateDot();
 document.getElementById("cifra-editor").style.fontSize=edFs+"px";
 initSpeedControl();
@@ -4774,7 +5035,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePresentation()
 // PWA Manifest
 const ICON_SVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#f5a623"/><path d="M180 370V130l230-40v240" stroke="#0d0d0f" stroke-width="40" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="130" cy="370" r="70" fill="#0d0d0f"/><circle cx="360" cy="330" r="70" fill="#0d0d0f"/></svg>`;
 const ICON_URL="data:image/svg+xml;base64,"+btoa(ICON_SVG);
-const manifest={name:"Cifra-Musica",short_name:"Cifras",description:"Suas cifras. Seu repertório. Em qualquer lugar.",start_url:"./",display:"standalone",background_color:"#111013",theme_color:"#f5a623",icons:[{src:ICON_URL,sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}]};
+const manifest={name:"Cifra-Musica",short_name:"Cifras",description:"Suas cifras. Seu repertório. Em qualquer lugar.",start_url:"./",display:"standalone",background_color:"#f5efe6",theme_color:"#f5a623",icons:[{src:ICON_URL,sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}]};
 const mblob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
 document.getElementById("pwa-manifest").href=URL.createObjectURL(mblob);
 const al=document.createElement("link");al.rel="apple-touch-icon";al.href=ICON_URL;document.head.appendChild(al);

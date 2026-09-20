@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="theme-light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<meta name="theme-color" content="#111013">
+<meta name="theme-color" content="#f5efe6">
 <title>Harpa Cristã · Cifra-Musica</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#111013;color:#ece7df;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -215,10 +215,53 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 .harpa-save-body{padding:15px}.harpa-save-body label{display:block;color:#aea18e;font-size:11px;font-weight:800;margin:0 0 6px}.harpa-save-body select{width:100%;background:#191715;border:1px solid #443b33;color:#eee5d8;border-radius:11px;padding:12px;margin-bottom:11px;font-size:14px}.harpa-save-note{background:#211e1b;border:1px solid #3b342d;border-radius:11px;padding:10px 12px;color:#a99d8c;font-size:11px;line-height:1.45;margin-bottom:12px}.harpa-save-note strong{color:#f5c842}.harpa-save-actions{display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
 @media(max-width:520px){.harpa-save-overlay{padding:0;align-items:flex-end}.harpa-save-panel{border-radius:22px 22px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}}
 
+
+
+/* v6.18 — Harpa clara suave por padrão */
+html.theme-light{color-scheme:light;--surface:#fffdf9;--surface2:#f8f2e9;--border:#ded4c6;--gold:#a66f15;--muted:#766d63;--red:#b43f36;--green:#327947}
+html.theme-light body{background:linear-gradient(180deg,#faf6f0,#f1eae0);color:#342f2a}
+html.theme-light .top{background:rgba(255,252,247,.97);border-bottom-color:#e2d8cb;box-shadow:0 7px 20px rgba(80,62,40,.07)}
+html.theme-light .brand b{color:#8b6119}
+html.theme-light .brand span{color:#8d8276}
+html.theme-light .back,
+html.theme-light .btn-dark,
+html.theme-light .btn,
+html.theme-light .step{background:#fffaf3;color:#625950;border-color:#ded3c5}
+html.theme-light .btn-gold{background:#d9a238;color:#36260b}
+html.theme-light .btn-green{background:#edf6ee;color:#327947;border-color:#c9dfcc}
+html.theme-light .hero,
+html.theme-light .panel,
+html.theme-light .hino-row,
+html.theme-light .toolbar,
+html.theme-light .transpose,
+html.theme-light .cifra-card,
+html.theme-light .harpa-save-panel{background:#fffdf9;border-color:#ded4c6;box-shadow:0 8px 22px rgba(86,67,44,.07)}
+html.theme-light .hero h1,
+html.theme-light .detail-title .n{color:#8b6119}
+html.theme-light .hero p,
+html.theme-light .detail-title p,
+html.theme-light .rmeta,
+html.theme-light .help{color:#766d63}
+html.theme-light .search input,
+html.theme-light .transpose select,
+html.theme-light .harpa-save-body select{background:#faf6ef;color:#342f2a;border-color:#dfd5c8}
+html.theme-light .hino-row{color:#342f2a}
+html.theme-light .num{background:#f3e4c6;color:#815817}
+html.theme-light .cifra-card .lyricrow{color:#342f2a}
+html.theme-light .chordrow{color:#b43f36}
+html.theme-light .testbadge{background:#f2e3be;color:#7b5716}
+html.theme-light .harpa-save-head{border-color:#e2d7ca}
+html.theme-light .harpa-save-head h3{color:#8b6119}
+html.theme-light .harpa-save-head button{background:#f5eee4;color:#655b52;border-color:#ddd1c3}
+html.theme-light .harpa-save-note{background:#faf4eb;border-color:#e1d6c9;color:#776d63}
+
+/* no apresentador da Harpa, claro é o padrão */
+#presentation.paper .musicline.coro .lyricrow{color:#1e1a16}
+
 </style>
 </head>
 <body>
-<div class="top"><div class="topin"><a class="back" href="/">← Início</a><div class="brand"><b>📖 Harpa Cristã</b><span>640 hinos cifrados</span></div><button id="top-list" class="btn btn-dark btn-sm hidden" onclick="showList()">Lista</button></div></div>
+<div class="top"><div class="topin"><a class="back" href="/">← Início</a><div class="brand"><b>📖 Harpa Cristã</b><span>640 hinos cifrados</span></div><button id="harpa-theme-btn" class="btn btn-dark btn-sm" onclick="toggleHarpaAppTheme()" title="Trocar tema">🌙</button><button id="top-list" class="btn btn-dark btn-sm hidden" onclick="showList()">Lista</button></div></div>
 <main class="wrap">
 <section id="list-screen">
   <div class="hero"><h1>Harpa Cristã Cifrada</h1><p>640 hinos cifrados com cada acorde posicionado exatamente sobre o trecho em que entra na melodia.</p><span class="testbadge">640 HINOS · CIFRADOS</span><div class="search"><input id="search" placeholder="Número ou nome..."><button class="btn btn-gold" onclick="runSearch()">Buscar</button></div></div>
@@ -379,6 +422,19 @@ function transpose(d){steps+=d;refresh()} function resetTone(){steps=0;document.
 function jumpTone(v){if(!v||!current)return;steps=((NMAP[v]-NMAP[current.tone])%12+12)%12;document.getElementById('tone-select').value='';refresh()}
 function changeFont(d){fontSize=Math.max(9,Math.min(26,fontSize+d));refresh()}
 
+function applyHarpaAppTheme(theme,persist=false){
+  const dark=theme==='dark';
+  document.documentElement.classList.toggle('theme-dark',dark);
+  document.documentElement.classList.toggle('theme-light',!dark);
+  if(persist)localStorage.setItem('cifra_theme',dark?'dark':'light');
+  const b=document.getElementById('harpa-theme-btn');if(b)b.textContent=dark?'☀️':'🌙';
+  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#111013':'#f5efe6';
+}
+function toggleHarpaAppTheme(){
+  const dark=document.documentElement.classList.contains('theme-dark');
+  applyHarpaAppTheme(dark?'light':'dark',true);
+}
+
 function togglePresTheme(){
   const p=document.getElementById('presentation');
   const paper=p.classList.toggle('paper');
@@ -387,7 +443,8 @@ function togglePresTheme(){
   localStorage.setItem('harpa_pres_theme',paper?'paper':'warm');
 }
 function applyPresTheme(){
-  const paper=localStorage.getItem('harpa_pres_theme')==='paper';
+  const saved=localStorage.getItem('harpa_pres_theme');
+  const paper=saved?saved==='paper':true;
   const p=document.getElementById('presentation');
   if(p)p.classList.toggle('paper',paper);
   const b=document.getElementById('pres-theme-btn');
@@ -435,6 +492,6 @@ async function saveHarpaNow(withSinger){
 }
 function saveToLibrary(){openHarpaSave()}
 window.addEventListener('resize',()=>{if(current&&document.getElementById('presentation').classList.contains('on'))renderInto('pres-cifra',presSize)});
-document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._q);window._q=setTimeout(runSearch,140)});toneOptions();load();
+applyHarpaAppTheme(localStorage.getItem('cifra_theme')||'light');document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._q);window._q=setTimeout(runSearch,140)});toneOptions();load();
 </script>
 </body></html>

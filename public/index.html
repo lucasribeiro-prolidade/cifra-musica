@@ -1,10 +1,10 @@
 
 <!DOCTYPE html>
-<html lang="pt-BR" class="theme-light">
+<html lang="pt-BR" class="theme-dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#f5efe6">
+<meta name="theme-color" content="#161514">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cifra-Musica">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -5150,7 +5150,7 @@ function toast(msg,err=0){
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
-applyAppTheme(localStorage.getItem("cifra_theme")||"light");
+applyAppTheme(localStorage.getItem("cifra_theme")||"dark");
 updateDot();
 document.getElementById("cifra-editor").style.fontSize=edFs+"px";
 initSpeedControl();
@@ -5163,7 +5163,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePresentation()
 // PWA Manifest
 const ICON_SVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#f5a623"/><path d="M180 370V130l230-40v240" stroke="#0d0d0f" stroke-width="40" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="130" cy="370" r="70" fill="#0d0d0f"/><circle cx="360" cy="330" r="70" fill="#0d0d0f"/></svg>`;
 const ICON_URL="data:image/svg+xml;base64,"+btoa(ICON_SVG);
-const manifest={name:"Cifra-Musica",short_name:"Cifras",description:"Suas cifras. Seu repertório. Em qualquer lugar.",start_url:"./",display:"standalone",background_color:"#f5efe6",theme_color:"#f5a623",icons:[{src:ICON_URL,sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}]};
+const manifest={name:"Cifra-Musica",short_name:"Cifras",description:"Suas cifras. Seu repertório. Em qualquer lugar.",start_url:"./",display:"standalone",background_color:"#161514",theme_color:"#f5a623",icons:[{src:ICON_URL,sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}]};
 const mblob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
 document.getElementById("pwa-manifest").href=URL.createObjectURL(mblob);
 const al=document.createElement("link");al.rel="apple-touch-icon";al.href=ICON_URL;document.head.appendChild(al);

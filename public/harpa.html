@@ -1,9 +1,10 @@
+
 <!doctype html>
-<html lang="pt-BR" class="theme-light">
+<html lang="pt-BR" class="theme-dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<meta name="theme-color" content="#f5efe6">
+<meta name="theme-color" content="#111013">
 <title>Harpa Cristã · Cifra-Musica</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#111013;color:#ece7df;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -444,7 +445,7 @@ function togglePresTheme(){
 }
 function applyPresTheme(){
   const saved=localStorage.getItem('harpa_pres_theme');
-  const paper=saved?saved==='paper':true;
+  const paper=saved?saved==='paper':false;
   const p=document.getElementById('presentation');
   if(p)p.classList.toggle('paper',paper);
   const b=document.getElementById('pres-theme-btn');
@@ -492,6 +493,6 @@ async function saveHarpaNow(withSinger){
 }
 function saveToLibrary(){openHarpaSave()}
 window.addEventListener('resize',()=>{if(current&&document.getElementById('presentation').classList.contains('on'))renderInto('pres-cifra',presSize)});
-applyHarpaAppTheme(localStorage.getItem('cifra_theme')||'light');document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._q);window._q=setTimeout(runSearch,140)});toneOptions();load();
+applyHarpaAppTheme(localStorage.getItem('cifra_theme')||'dark');document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._q);window._q=setTimeout(runSearch,140)});toneOptions();load();
 </script>
 </body></html>

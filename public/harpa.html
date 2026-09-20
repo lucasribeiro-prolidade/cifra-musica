@@ -33,7 +33,13 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 .musicline.break{height:.55em;min-height:.55em}
 .chordrow{position:relative;height:1.18em;color:var(--red);font-weight:900;white-space:pre}
 .chordmark{position:absolute;top:0;white-space:nowrap}
-.lyricrow{white-space:pre;color:#f4efe8}.lyricrow.em{font-style:italic;font-weight:700}
+.lyricrow{white-space:pre;color:#f4efe8}.lyricrow.em{font-style:italic;font-weight:800}
+.musicline.coro{margin-left:2.2ch}
+.musicline.coro .lyricrow{font-style:italic;font-weight:800;color:#f2eadf}
+.musicline.coro .chordrow{font-weight:900}
+#presentation .musicline.coro{margin-left:2.6ch}
+#presentation .musicline.coro .lyricrow{font-style:italic;font-weight:850;color:#f7efe3}
+#presentation.paper .musicline.coro .lyricrow{color:#1e1a16}
 .help{font-size:10px;color:#777068;margin:9px 2px 0;line-height:1.45}
 #presentation{position:fixed;inset:0;z-index:5000;background:#0d0d0f;display:none;flex-direction:column}
 #presentation.on{display:flex}.pres-top{height:54px;display:flex;align-items:center;gap:7px;padding:7px 10px;background:#151518;border-bottom:1px solid #29262a}
@@ -255,13 +261,14 @@ function currentTone(){if(!current?.tone)return null;const i=NMAP[current.tone];
 function toneOptions(){document.getElementById('tone-select').innerHTML='<option value="">Mudar...</option>'+TONES.map(t=>`<option value="${t}">${t}</option>`).join('')}
 function renderList(items=DATA){const box=document.getElementById('list');box.innerHTML=items.map(x=>`<button class="hino-row" onclick="openHino(${x.number})"><span class="num">${x.number}</span><span class="rinfo"><span class="rtitle">${esc(x.title)}</span><span class="rmeta">Tom original: ${esc(x.tone_label)}</span></span><span>›</span></button>`).join('')||'<div class="panel">Nenhum hino encontrado.</div>'}
 function runSearch(){const q=document.getElementById('search').value.trim();if(!q)return renderList(DATA);const n=Number(q),nq=norm(q);renderList(DATA.filter(x=>(Number.isInteger(n)&&x.number===n)||norm(x.title).includes(nq)))}
-async function load(){try{const r=await fetch('/data/harpa.json?v=55',{cache:'no-store'});if(!r.ok)throw new Error('harpa.json não encontrado');const d=await r.json();DATA=d.items||[];renderList()}catch(e){document.getElementById('list').innerHTML=`<div class="panel">${esc(e.message)}</div>`}}
+async function load(){try{const r=await fetch('/data/harpa.json?v=617',{cache:'no-store'});if(!r.ok)throw new Error('harpa.json não encontrado');const d=await r.json();DATA=d.items||[];renderList()}catch(e){document.getElementById('list').innerHTML=`<div class="panel">${esc(e.message)}</div>`}}
 function openHino(n){current=DATA.find(x=>x.number===n);if(!current)return;steps=0;fontSize=window.innerWidth<=520?12:15;document.getElementById('list-screen').classList.add('hidden');document.getElementById('detail-screen').classList.remove('hidden');document.getElementById('top-list').classList.remove('hidden');document.getElementById('detail-num').textContent='Hino '+current.number;document.getElementById('detail-name').textContent=current.title;document.getElementById('detail-original').textContent='Tom original: '+current.tone_label;refresh();window.scrollTo(0,0)}
 function showList(){closePresentation();document.getElementById('detail-screen').classList.add('hidden');document.getElementById('list-screen').classList.remove('hidden');document.getElementById('top-list').classList.add('hidden');window.scrollTo(0,0)}
 function lineHTML(line){
   if(line.break)return '<div class="musicline break"></div>';
   const chords=(line.chords||[]).map(c=>`<span class="chordmark" style="left:${c.pos}ch">${esc(txChord(c.chord,steps))}</span>`).join('');
-  return `<div class="musicline"><div class="chordrow">${chords}</div><div class="lyricrow${line.em?' em':''}">${esc(line.text)}</div></div>`;
+  const isCoro=line.section==='coro';
+  return `<div class="musicline${isCoro?' coro':''}"><div class="chordrow">${chords}</div><div class="lyricrow${line.em||isCoro?' em':''}">${esc(line.text)}</div></div>`;
 }
 
 // Divide frases longas no modo Apresentar, preservando a posição musical dos acordes.
@@ -287,7 +294,7 @@ function makeSegment(line,start,end,separatorStart){
       chords.push({pos:Math.max(0,c.pos-contentStart),chord:c.chord});
     }
   }
-  return {text,chords,em:line.em};
+  return {text,chords,em:line.em,section:line.section};
 }
 function splitRangeByWords(line,start,end,maxChars){
   const result=[];
@@ -338,7 +345,7 @@ function presentationLines(lines){
       let seg=makeSegment(line,r.start,r.end,ri>0?ranges[ri-1].sep:null);
       if(seg.text.length>maxChars){
         // reaplica os acordes em uma linha temporária para a quebra por palavras
-        const tmp={text:seg.text,chords:seg.chords,em:seg.em};
+        const tmp={text:seg.text,chords:seg.chords,em:seg.em,section:seg.section};
         out.push(...splitRangeByWords(tmp,0,tmp.text.length,maxChars));
       }else if(seg.text.length){
         out.push(seg);
@@ -387,7 +394,7 @@ function applyPresTheme(){
   if(b)b.textContent=paper?'🌙':'☀';
 }
 
-function openPresentation(){if(!current)return;applyPresTheme();presSize=window.innerWidth<=520?15:17;document.getElementById('pres-title').textContent=`${current.number} · ${current.title} · ${currentTone()}`;document.getElementById('presentation').classList.add('on');document.body.style.overflow='hidden';renderInto('pres-cifra',presSize);document.getElementById('pres-body').scrollTop=0}
+function openPresentation(){if(!current)return;applyPresTheme();presSize=window.innerWidth<=520?15:17;document.getElementById('pres-title').textContent=`${current.number} · ${current.title} · ${currentTone()}`;document.getElementById('presentation').classList.add('on');document.body.style.overflow='hidden';renderInto('pres-cifra',presSize);const body=document.getElementById('pres-body');body.scrollTop=0;requestAnimationFrame(()=>body.scrollTop=0)}
 function closePresentation(){stopScroll();document.getElementById('presentation').classList.remove('on');document.body.style.overflow=''}
 function presFont(d){presSize=Math.max(9,Math.min(30,presSize+d));renderInto('pres-cifra',presSize)}
 function setSpeed(v){scrollSpeed=v;if(!scrolling)startScroll()} function toggleScroll(){scrolling?stopScroll():startScroll()}

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1489,6 +1488,10 @@ main{max-width:760px}
 #presentation.harpa-mode .lyric-line{color:#fff8ec;line-height:1.55;white-space:pre}
 #presentation.harpa-mode .section-label{margin-top:18px;color:#f5cf69}
 #presentation.harpa-mode .harpa-blank{height:1em}
+#presentation.harpa-mode .harpa-coro{margin-left:2.6ch}
+#presentation.harpa-mode .harpa-coro .lyric-line{font-style:italic;font-weight:850;color:#f7efe3}
+#presentation.harpa-mode .harpa-coro .chord-row{font-weight:900}
+#presentation.harpa-mode.paper .harpa-coro .lyric-line{color:#1e1a16}
 
 @media(max-width:620px){
   .save-singer-overlay{padding:0;align-items:flex-end}
@@ -2225,6 +2228,119 @@ function renderSavedHarpaPresentation(text){
     i++;
   }
   return html;
+}
+
+
+let harpaCanonicalDataCache=null;
+
+async function getHarpaCanonicalItem(){
+  const title=(document.getElementById("song-title")?.value||"").trim();
+  const m=title.match(/^Harpa\s+(\d+)\s*-/i);
+  if(!m)return null;
+  if(!harpaCanonicalDataCache){
+    const r=await fetch("/data/harpa.json?v=617",{cache:"no-store"});
+    if(!r.ok)throw new Error("Não consegui carregar a Harpa atualizada.");
+    const d=await r.json();
+    harpaCanonicalDataCache=d.items||[];
+  }
+  return harpaCanonicalDataCache.find(x=>Number(x.number)===Number(m[1]))||null;
+}
+
+function harpaTargetStep(item,targetTone){
+  const from=normalizeToneValue(item?.tone||"");
+  const to=normalizeToneValue(targetTone||from);
+  if(!from||!to||NMAP[from]===undefined||NMAP[to]===undefined)return 0;
+  return ((NMAP[to]-NMAP[from])%12+12)%12;
+}
+
+function serializeHarpaCanonicalItem(item,targetTone){
+  if(!item)return "";
+  const step=harpaTargetStep(item,targetTone);
+  const useFlats=tonePrefersFlats(normalizeToneValue(targetTone||item.tone));
+  const rows=[];
+  for(const line of item.lines||[]){
+    if(line.break){rows.push("");continue;}
+    const chordrow=[];
+    for(const c of line.chords||[]){
+      const tc=txChord(c.chord,step,useFlats);
+      while(chordrow.length<c.pos)chordrow.push(" ");
+      for(let i=0;i<tc.length;i++)chordrow[c.pos+i]=tc[i];
+    }
+    rows.push(chordrow.join("").replace(/\s+$/,""));
+    rows.push(line.text||"");
+  }
+  return rows.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+
+function harpaDataMakeSegment(line,start,end,carryPos=null){
+  let a=start,b=end;
+  while(a<b&&/\s/.test(line.text[a]||""))a++;
+  while(b>a&&/\s/.test(line.text[b-1]||""))b--;
+  const text=line.text.slice(a,b);
+  const chords=[];
+  for(const c of line.chords||[]){
+    if(carryPos!=null&&c.pos>=carryPos&&c.pos<a)chords.push({text:c.text,pos:0});
+    else if(c.pos>=a&&c.pos<b)chords.push({text:c.text,pos:Math.max(0,c.pos-a)});
+  }
+  return {text,chords,section:line.section||""};
+}
+
+function harpaDataSplitLongSegment(seg,maxChars){
+  const result=[];let s=0;const end=seg.text.length;
+  while(end-s>maxChars){
+    const ideal=s+maxChars;let cut=-1;
+    for(let i=ideal;i>=s+Math.floor(maxChars*.58);i--){if(/[;,.:!?]/.test(seg.text[i]||"")){cut=i+1;break;}}
+    if(cut<0)for(let i=ideal;i>=s+Math.floor(maxChars*.58);i--){if(/\s/.test(seg.text[i]||"")){cut=i;break;}}
+    if(cut<0)cut=ideal;
+    result.push(harpaDataMakeSegment(seg,s,cut,null));
+    result[result.length-1].section=seg.section||"";
+    s=cut;
+    while(s<end&&/\s/.test(seg.text[s]||""))s++;
+  }
+  if(s<end){
+    const tail=harpaDataMakeSegment(seg,s,end,null);
+    tail.section=seg.section||"";
+    result.push(tail);
+  }
+  return result;
+}
+
+function harpaDataPresentationLines(item,targetTone){
+  const step=harpaTargetStep(item,targetTone);
+  const useFlats=tonePrefersFlats(normalizeToneValue(targetTone||item.tone));
+  const max=harpaPresentationMaxChars();
+  const out=[];
+  for(const raw of item.lines||[]){
+    if(raw.break){out.push({break:true});continue;}
+    const line={
+      text:raw.text||"",
+      section:raw.section||"",
+      chords:(raw.chords||[]).map(c=>({pos:c.pos,text:txChord(c.chord,step,useFlats)}))
+    };
+    const slashes=[];for(let i=0;i<line.text.length;i++)if(line.text[i]==="/")slashes.push(i);
+    const ranges=[];let start=0;
+    if(slashes.length){
+      for(const slash of slashes){ranges.push({start,end:slash,sep:slash});start=slash+1;}
+      ranges.push({start,end:line.text.length,sep:null});
+    }else ranges.push({start:0,end:line.text.length,sep:null});
+    ranges.forEach((r,idx)=>{
+      const carry=idx>0?ranges[idx-1].sep:null;
+      const seg=harpaDataMakeSegment(line,r.start,r.end,carry);
+      if(!seg.text)return;
+      if(seg.text.length>max)out.push(...harpaDataSplitLongSegment(seg,max));
+      else out.push(seg);
+    });
+  }
+  return out;
+}
+
+function renderHarpaCanonicalPresentation(item,targetTone){
+  return harpaDataPresentationLines(item,targetTone).map(seg=>{
+    if(seg.break)return '<div class="harpa-blank"></div>';
+    const spans=(seg.chords||[]).map(c=>`<span class="chord-abs" style="left:${c.pos}ch">${esc(c.text)}</span>`).join("");
+    const coro=seg.section==="coro"?" harpa-coro":"";
+    return `<div class="chord-lyric-pair${coro}"><div class="chord-row">${spans}</div><div class="lyric-line">${esc(seg.text)||"&nbsp;"}</div></div>`;
+  }).join("");
 }
 
 function tonePrefersFlats(tone){
@@ -2987,14 +3103,22 @@ async function removeCifraFromRepertoire(id){
     await loadLib();await openRepertoire(r.id);toast("Música removida da pasta.");
   }catch(e){toast(e.message,1);}
 }
-function openSharedSong(id){
+async function openSharedSong(id){
   const r=groupView.repertoire,x=(groupView.sharedItems||[]).find(a=>a.id===id);if(!x||!r)return;
   currentCifraId=x.id;pendingShareRepertoireId=null;
   currentSharedContext={group_id:r.group_id,group_name:r.group_name,repertoire_id:r.id,repertoire_name:r.name,can_edit:!!x.can_edit,is_owner:!!x.is_owner};
-  document.getElementById("song-title").value=x.title;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";cifra=normalizeEnharmonicMinorForTone(cifra,baseTone);searchSource=null;
+  document.getElementById("song-title").value=x.title;
+  let openedText=x.text;
+  if(/^Harpa\s+\d+\s*-/i.test(x.title||"")){
+    try{
+      const item=await getHarpaCanonicalItem();
+      if(item)openedText=serializeHarpaCanonicalItem(item,normalizeToneValue(x.tone)||item.tone);
+    }catch{}
+  }
+  cifra=openedText;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(openedText)||"";cifra=normalizeEnharmonicMinorForTone(cifra,baseTone);searchSource=null;
   currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));
-  document.getElementById("raw-input").value=x.text;
-  document.getElementById("cifra-editor").value=x.text;
+  document.getElementById("raw-input").value=openedText;
+  document.getElementById("cifra-editor").value=openedText;
   setCurrentEditAccess(!!x.can_edit);renderSingerAssignments();renderShareContextBanner();closeGroups();switchTab("preview");
   toast(x.can_edit?"Música compartilhada aberta para edição.":"Música compartilhada aberta em modo visualização.");
 }
@@ -3852,13 +3976,20 @@ function renderLib(){
     </div>`).join("");
 }
 
-function loadItem(id){
+async function loadItem(id){
   const x=library.find(i=>i.id===id);if(!x)return;
   document.getElementById("song-title").value=x.title;
-  currentCifraId=x.id;currentSharedContext=null;pendingShareRepertoireId=null;cifra=x.text;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(x.text)||"";cifra=normalizeEnharmonicMinorForTone(cifra,baseTone);searchSource=null;
+  let openedText=x.text;
+  if(/^Harpa\s+\d+\s*-/i.test(x.title||"")){
+    try{
+      const item=await getHarpaCanonicalItem();
+      if(item)openedText=serializeHarpaCanonicalItem(item,normalizeToneValue(x.tone)||item.tone);
+    }catch{}
+  }
+  currentCifraId=x.id;currentSharedContext=null;pendingShareRepertoireId=null;cifra=openedText;st=0;baseTone=normalizeToneValue(x.tone)||detectKey(openedText)||"";cifra=normalizeEnharmonicMinorForTone(cifra,baseTone);searchSource=null;
   currentSingerTones=(x.singers||[]).map(s=>({singer_id:s.singer_id,name:s.name||"",tone:s.tone||""}));
-  document.getElementById("raw-input").value=x.text;
-  document.getElementById("cifra-editor").value=x.text;
+  document.getElementById("raw-input").value=openedText;
+  document.getElementById("cifra-editor").value=openedText;
   setCurrentEditAccess(true);renderSingerAssignments();renderShareContextBanner();closeLibrary();switchTab("preview");
   toast("Cifra carregada!");
 }
@@ -4460,7 +4591,7 @@ let scrolling=false,
 
 if(!SPEED_LEVELS[speedLevel]) speedLevel=5;
 
-function openPresentation(){
+async function openPresentation(){
   const text=txText(cifra,st);
   if(!text.trim()){toast("Nenhuma cifra carregada!",1);return;}
   const title=document.getElementById("song-title").value||"Apresentação";
@@ -4472,9 +4603,23 @@ function openPresentation(){
   document.getElementById("pres-title").textContent=title+singerInfo;
   const d=document.getElementById("pres-display");
   d.style.fontSize=(isHarpa&&window.innerWidth<=620?15:pfz)+"px";
-  d.innerHTML=isHarpa?renderSavedHarpaPresentation(text):renderCifra(text);
-  document.getElementById("pres-content").scrollTop=0;
+
+  let rendered=false;
+  if(isHarpa){
+    try{
+      const item=await getHarpaCanonicalItem();
+      if(item){
+        d.innerHTML=renderHarpaCanonicalPresentation(item,currentDisplayedTone()||item.tone);
+        rendered=true;
+      }
+    }catch{}
+  }
+  if(!rendered)d.innerHTML=isHarpa?renderSavedHarpaPresentation(text):renderCifra(text);
+
   p.classList.add("on");document.body.style.overflow="hidden";
+  const content=document.getElementById("pres-content");
+  content.scrollTop=0;
+  requestAnimationFrame(()=>content.scrollTop=0);
   scrolling=false;updateScrollBtn();
 }
 function closePresentation(){

@@ -259,6 +259,26 @@ html.theme-light .harpa-save-note{background:#faf4eb;border-color:#e1d6c9;color:
 /* no apresentador da Harpa, claro é o padrão */
 #presentation.paper .musicline.coro .lyricrow{color:#1e1a16}
 
+
+
+/* v6.21 — tema claro com contraste completo */
+html.theme-light .rtitle,
+html.theme-light .detail-title h1,
+html.theme-light .lyricrow,
+html.theme-light .harpa-save-body,
+html.theme-light .harpa-save-body strong{color:#342f2a!important}
+html.theme-light .rmeta,
+html.theme-light .detail-title p,
+html.theme-light .help,
+html.theme-light .harpa-save-body label,
+html.theme-light .harpa-save-note{color:#756b61!important}
+html.theme-light .toolbar,
+html.theme-light .transpose,
+html.theme-light .cifra-card{color:#342f2a}
+html.theme-light .search input::placeholder{color:#a79d92}
+html.theme-light .harpa-save-note strong{color:#8b6119!important}
+html.theme-light .pres-theme-btn{background:#fffaf3!important;color:#655c52!important;border-color:#d9ccbc!important}
+
 </style>
 </head>
 <body>
@@ -423,6 +443,9 @@ function transpose(d){steps+=d;refresh()} function resetTone(){steps=0;document.
 function jumpTone(v){if(!v||!current)return;steps=((NMAP[v]-NMAP[current.tone])%12+12)%12;document.getElementById('tone-select').value='';refresh()}
 function changeFont(d){fontSize=Math.max(9,Math.min(26,fontSize+d));refresh()}
 
+function harpaTheme(){
+  return document.documentElement.classList.contains('theme-light')?'light':'dark';
+}
 function applyHarpaAppTheme(theme,persist=false){
   const dark=theme==='dark';
   document.documentElement.classList.toggle('theme-dark',dark);
@@ -430,22 +453,19 @@ function applyHarpaAppTheme(theme,persist=false){
   if(persist)localStorage.setItem('cifra_theme',dark?'dark':'light');
   const b=document.getElementById('harpa-theme-btn');if(b)b.textContent=dark?'☀️':'🌙';
   const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#111013':'#f5efe6';
+  applyPresTheme(theme);
 }
 function toggleHarpaAppTheme(){
-  const dark=document.documentElement.classList.contains('theme-dark');
-  applyHarpaAppTheme(dark?'light':'dark',true);
+  const next=harpaTheme()==='dark'?'light':'dark';
+  applyHarpaAppTheme(next,true);
 }
 
 function togglePresTheme(){
-  const p=document.getElementById('presentation');
-  const paper=p.classList.toggle('paper');
-  const b=document.getElementById('pres-theme-btn');
-  if(b)b.textContent=paper?'🌙':'☀';
-  localStorage.setItem('harpa_pres_theme',paper?'paper':'warm');
+  const next=harpaTheme()==='light'?'dark':'light';
+  applyHarpaAppTheme(next,true);
 }
-function applyPresTheme(){
-  const saved=localStorage.getItem('harpa_pres_theme');
-  const paper=saved?saved==='paper':false;
+function applyPresTheme(theme=harpaTheme()){
+  const paper=theme==='light';
   const p=document.getElementById('presentation');
   if(p)p.classList.toggle('paper',paper);
   const b=document.getElementById('pres-theme-btn');

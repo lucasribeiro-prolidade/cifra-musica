@@ -2108,6 +2108,20 @@ function isChord(line){
   return new RegExp('^\\s*'+ct+'(?:\\s+'+ct+')*\\s*$').test(t);
 }
 
+function expandTabsForCifra(line,tabSize=8){
+  let out="",col=0;
+  for(const ch of String(line||"")){
+    if(ch==="\t"){
+      const n=tabSize-(col%tabSize);
+      out+=" ".repeat(n);col+=n;
+    }else{out+=ch;col++;}
+  }
+  return out;
+}
+function normalizeCifraColumns(text){
+  return String(text||"").replace(/\r\n?/g,"\n").split("\n").map(l=>expandTabsForCifra(l)).join("\n");
+}
+
 function parseChordsWithPos(line){
   const chords=[];const re=/\S+/g;let m;
   while((m=re.exec(line))!==null)chords.push({text:m[0],pos:m.index});
@@ -2115,7 +2129,7 @@ function parseChordsWithPos(line){
 }
 
 function renderCifra(text){
-  const lines=text.split("\n");let html="";let i=0;
+  const lines=normalizeCifraColumns(text).split("\n");let html="";let i=0;
   while(i<lines.length){
     const line=lines[i];
     const next=i+1<lines.length?lines[i+1]:null;
@@ -2240,7 +2254,7 @@ function detectKey(text){
 // CLEAN
 // ══════════════════════════════════════════════════════
 function cleanCifra(text){
-  return text.split("\n").map(l=>l.replace(/\t/g,"  ")).filter(l=>{
+  return normalizeCifraColumns(text).split("\n").filter(l=>{
     const t=l.trim().toLowerCase();
     if(!t)return true;
     if(/cifraclub|letras\.mus|vagalume|palco mp3|baixar|download|compartilhe|publicidade|anúncio|propaganda|acesse|visite|inscreva|seguidores|curtir\s|like\s|instagram|facebook|twitter|youtube\.com/i.test(t))return false;
@@ -3665,7 +3679,7 @@ function setCifraAndPreview(txt,filename){
     document.getElementById("song-title").value=filename.replace(/\.[^.]+$/,"").replace(/[-_]/g," ");
   }
   const toneMatch=txt.match(/TOM:\s*(.+)/i);
-  const cleaned=txt.replace(/TITULO:.+\n?/gi,"").replace(/ARTISTA:.+\n?/gi,"").replace(/TOM:.+\n?/gi,"").trim();
+  const cleaned=normalizeCifraColumns(txt.replace(/TITULO:.+\n?/gi,"").replace(/ARTISTA:.+\n?/gi,"").replace(/TOM:.+\n?/gi,"").trim());
   currentCifraId=null;currentSharedContext=null;pendingShareRepertoireId=null;cifra=cleaned;st=0;baseTone=normalizeToneValue(toneMatch?.[1])||detectKey(cleaned)||"";searchSource=null;
   document.getElementById("raw-input").value=cleaned;
   document.getElementById("cifra-editor").value=cleaned;
@@ -3708,8 +3722,9 @@ function quickClean(){
 function goDirectEdit(){
   const raw=document.getElementById("raw-input").value;
   if(!raw.trim()){toast("Cole uma cifra primeiro!",1);return;}
-  cifra=raw;st=0;
-  document.getElementById("cifra-editor").value=raw;
+  cifra=normalizeCifraColumns(raw);st=0;
+  document.getElementById("raw-input").value=cifra;
+  document.getElementById("cifra-editor").value=cifra;
   switchTab("preview");
   setTimeout(()=>openManualEditor(),80);
 }

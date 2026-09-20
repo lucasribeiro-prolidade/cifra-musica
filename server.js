@@ -1155,15 +1155,178 @@ function anthropicText(data) {
   return (data?.content || []).filter(x => x.type === 'text').map(x => x.text).join('\n').trim();
 }
 
+
+// ══════════════════════════════════════════════════════
+// POSIÇÃO EXATA DOS ACORDES — v6.16
+// ══════════════════════════════════════════════════════
+const EXACT_CHORD_TOKEN = '[A-G](?:#|b)?(?:maj|min|m(?!aj)|dim|aug|sus\\d*|add\\d*|°|ø|\\d+)*(?:\\/[A-G](?:#|b)?)?';
+const exactChordOnlyRx = new RegExp('^\\s*' + EXACT_CHORD_TOKEN + '(?:\\s+' + EXACT_CHORD_TOKEN + ')*\\s*$');
+
+function expandTabsExact(line, tabSize = 8) {
+  let out = '';
+  let col = 0;
+  for (const ch of String(line || '')) {
+    if (ch === '\t') {
+      const count = tabSize - (col % tabSize);
+      out += ' '.repeat(count);
+      col += count;
+    } else {
+      out += ch;
+      col += 1;
+    }
+  }
+  return out;
+}
+
+function isExactChordRow(line) {
+  const t = String(line || '');
+  return !!t.trim() && exactChordOnlyRx.test(t);
+}
+
+function parseExactChordRow(line) {
+  const src = expandTabsExact(line);
+  const out = [];
+  const re = /\S+/g;
+  let m;
+  const oneChordRx = new RegExp('^' + EXACT_CHORD_TOKEN + '$');
+  while ((m = re.exec(src)) !== null) {
+    if (oneChordRx.test(m[0])) out.push({ chord: m[0], pos: m.index });
+  }
+  return out;
+}
+
+// Converte linha de acordes + linha de letra em [ACORDE] exatamente
+// na MESMA COLUNA do texto original. Nenhuma IA participa desta etapa.
+function rowsToInlineChordMarkers(input) {
+  const lines = String(input || '').replace(/\r\n?/g, '\n').split('\n').map(x => expandTabsExact(x));
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const chordLine = lines[i];
+    const lyricLine = i + 1 < lines.length ? lines[i + 1] : null;
+    if (isExactChordRow(chordLine) && lyricLine !== null && !isExactChordRow(lyricLine) && !/^\s*\[[^\]]+\]\s*$/.test(lyricLine)) {
+      const chords = parseExactChordRow(chordLine);
+      if (chords.length && /[A-Za-zÀ-ÿ]/.test(lyricLine)) {
+        let marked = lyricLine;
+        for (const c of [...chords].sort((a, b) => b.pos - a.pos)) {
+          const p = Math.max(0, Math.min(c.pos, marked.length));
+          marked = marked.slice(0, p) + '[' + c.chord + ']' + marked.slice(p);
+        }
+        out.push(marked);
+        i += 1;
+        continue;
+      }
+    }
+    out.push(chordLine);
+  }
+  return out.join('\n');
+}
+
+function hasInlineChordMarkers(text) {
+  return new RegExp('\\[' + EXACT_CHORD_TOKEN + '\\]').test(String(text || ''));
+}
+
+function stripObviousCifraNoisePreserveLayout(input) {
+  const blocked = /(?:cifraclub|letras\.mus|vagalume|palco mp3|baixar|download|compartilhe|publicidade|anúncio|propaganda|acesse|visite|inscreva|seguidores|instagram|facebook|twitter|youtube\.com|adblock|ads by|advertisement|sponsored)/i;
+  return String(input || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(x => expandTabsExact(x))
+    .filter(line => !blocked.test(line.trim()))
+    .join('\n')
+    .replace(/\n{4,}/g, '\n\n\n')
+    .trim();
+}
+
+async function extractCifraMetadataOnly(raw) {
+  const prompt = `Analise o material de cifra abaixo APENAS para identificar metadados.
+NÃO reescreva a letra. NÃO reescreva os acordes. NÃO organize o corpo.
+
+Retorne SOMENTE:
+TITULO: [título, se identificável]
+ARTISTA: [artista, se identificável]
+TOM: [tom, se identificável]
+
+MATERIAL:
+${String(raw || '').slice(0, 120000)}`;
+  try {
+    const data = await callAnthropic({
+      model: AI_MODEL,
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    return anthropicText(data).trim();
+  } catch {
+    return '';
+  }
+}
+
+function normalizeMarkerAiResult(raw) {
+  const txt = String(raw || '').trim();
+  if (!txt) return '';
+  return inlineChordMarkersToRows(txt);
+}
+
 app.post('/api/ai/organize', requireAuth, aiLimiter, async (req, res) => {
   try {
     const raw = String(req.body?.text || '').slice(0, 200000);
     if (!raw.trim()) return res.status(400).json({ error: 'Texto vazio.' });
-    const prompt = `Voce e especialista em limpar e organizar cifras musicais para musicos.\n\nCIFRA ORIGINAL:\n${raw}\n\nREGRA ABSOLUTA: NAO MOVA NENHUM ACORDE DE LUGAR. NAO ALTERE NOMES DE ACORDES.\nA posicao de cada acorde representa o momento exato da troca no instrumento.\n\nO QUE FAZER:\n- Remover propagandas, links e textos de site\n- Remover capotraste, BPM e tabs numericas quando nao forem parte essencial da cifra\n- Identificar secoes: [Intro] [Verso 1] [Refrao] [Ponte]\n- Extrair titulo e artista quando estiverem no material fornecido\n\nO QUE NUNCA FAZER:\n- Mover acordes de coluna\n- Renomear ou simplificar acordes\n- Juntar ou separar linhas de forma que altere o alinhamento\n\nRETORNE SOMENTE:\nTITULO: [nome]\nARTISTA: [artista]\nTOM: [tom]\n\n[cifra organizada preservando as posicoes]`;
-    const data = await callAnthropic({ model: AI_MODEL, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] });
-    const text = anthropicText(data);
+
+    const cleaned = stripObviousCifraNoisePreserveLayout(raw);
+    const markerized = rowsToInlineChordMarkers(cleaned);
+    const hadReliableRows = markerized !== cleaned && hasInlineChordMarkers(markerized);
+
+    // CIFRA COLADA JÁ ALINHADA:
+    // preserva o corpo 100% por cálculo de coluna; IA só lê metadados.
+    if (hadReliableRows) {
+      const meta = await extractCifraMetadataOnly(cleaned);
+      const body = inlineChordMarkersToRows(markerized);
+      const text = [meta, body].filter(Boolean).join('\n\n').trim();
+      return res.json({ text, position_mode: 'preserved' });
+    }
+
+    // Conteúdo já marcado [ACORDE]palavra: converte sem reinterpretar.
+    if (hasInlineChordMarkers(cleaned)) {
+      const meta = await extractCifraMetadataOnly(cleaned);
+      const body = inlineChordMarkersToRows(cleaned);
+      const text = [meta, body].filter(Boolean).join('\n\n').trim();
+      return res.json({ text, position_mode: 'markers' });
+    }
+
+    // Só usa IA para criar âncoras quando o texto realmente não contém
+    // posição confiável.
+    const prompt = `Você recebeu uma cifra musical em texto que NÃO possui posição confiável dos acordes.
+
+OBJETIVO:
+Organizar sem alterar a harmonia e marcar o ponto de entrada de cada acorde.
+
+REGRAS ABSOLUTAS:
+- Preserve a letra fornecida.
+- Preserve EXATAMENTE o nome de cada acorde, incluindo extensões e baixos.
+- NÃO invente, simplifique, transponha ou rearmonize.
+- NÃO junte dois versos e NÃO divida um verso em outro ponto.
+- Quando o material permitir saber onde um acorde entra, escreva [ACORDE] imediatamente antes da palavra/sílaba correspondente.
+- Se a posição não estiver clara, NÃO adivinhe: mantenha a linha de acordes separada.
+- Remova somente propaganda, link e texto claramente estranho à música.
+
+RETORNE SOMENTE:
+TITULO: [nome, se identificável]
+ARTISTA: [artista, se identificável]
+TOM: [tom, se identificável]
+
+CIFRA:
+[corpo com [ACORDE] antes da palavra/sílaba quando a posição for segura]
+
+MATERIAL ORIGINAL:
+${cleaned}`;
+
+    const data = await callAnthropic({
+      model: AI_MODEL,
+      max_tokens: 8000,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    const text = normalizeMarkerAiResult(anthropicText(data));
     if (!text) throw new Error('A IA nao retornou resultado.');
-    res.json({ text });
+    res.json({ text, position_mode: 'anchored' });
   } catch (err) {
     console.error('ai organize', err.message);
     res.status(err.status || 500).json({ error: err.message || 'Erro ao organizar com IA.' });
@@ -1202,34 +1365,53 @@ app.post('/api/ai/read-document', requireAuth, aiLimiter, async (req, res) => {
       if (!raw) return res.status(400).json({ error: 'Não consegui encontrar texto neste Word.' });
       if (raw.length > 120_000) return res.status(400).json({ error: 'O Word tem texto demais. Envie apenas a cifra desejada.' });
 
-      const prompt = `Organize a cifra musical extraída deste arquivo Word (${filename || 'arquivo.docx'}).
+      const cleaned = stripObviousCifraNoisePreserveLayout(raw);
+      const markerized = rowsToInlineChordMarkers(cleaned);
 
-REGRAS ABSOLUTAS:
-- Preserve letra e acordes presentes no arquivo.
-- NÃO invente acordes.
-- Quando houver linhas de acordes separadas, mantenha os espaços para deixar cada acorde sobre a palavra/sílaba correspondente.
-- Preserve estrofes, refrões e quebras de linha.
-- Remova cabeçalhos, rodapés, números de página e textos que não pertençam à música.
-- Se houver título, artista ou tom, extraia-os.
+      // Word cujo texto extraído já traz acordes em colunas:
+      // preserva a posição sem deixar a IA mover nada.
+      if (markerized !== cleaned && hasInlineChordMarkers(markerized)) {
+        const meta = await extractCifraMetadataOnly(cleaned);
+        const body = inlineChordMarkersToRows(markerized);
+        return res.json({
+          text: [meta, body].filter(Boolean).join('\n\n').trim(),
+          position_mode: 'preserved'
+        });
+      }
 
-RETORNE SOMENTE neste formato:
+      const prompt = `Leia o texto extraído deste Word (${filename || 'arquivo.docx'}) e organize a cifra.
+
+REGRA MAIS IMPORTANTE — POSIÇÃO:
+- NÃO tente alinhar acordes usando espaços aproximados.
+- Para cada acorde cuja entrada possa ser determinada pelo documento, coloque [ACORDE] imediatamente antes da palavra/sílaba onde ele entra.
+- NÃO mova a troca para uma palavra anterior ou posterior.
+- Se a posição não puder ser determinada com segurança, NÃO adivinhe: mantenha o acorde em linha separada.
+
+FIDELIDADE:
+- Preserve letra, estrofes e quebras de verso.
+- Preserve EXATAMENTE nomes de acordes, extensões e baixos.
+- NÃO invente, simplifique, transponha ou rearmonize.
+- Remova apenas cabeçalho, rodapé, número de página e ruído óbvio.
+
+RETORNE SOMENTE:
 TITULO: [nome, se identificado]
 ARTISTA: [artista, se identificado]
 TOM: [tom, se identificado]
 
-[cifra limpa e organizada]
+CIFRA:
+[cifra com [ACORDE] antes da palavra/sílaba]
 
 CONTEÚDO DO WORD:
-${raw}`;
+${cleaned}`;
 
       const data = await callAnthropic({
         model: AI_MODEL,
         max_tokens: 8000,
         messages: [{ role: 'user', content: prompt }]
       });
-      const text = anthropicText(data);
+      const text = normalizeMarkerAiResult(anthropicText(data));
       if (!text) throw new Error('A IA não conseguiu organizar o Word.');
-      return res.json({ text });
+      return res.json({ text, position_mode: 'anchored' });
     }
 
     const visualBlock = isImage
@@ -1240,42 +1422,58 @@ ${raw}`;
       ? `Leia esta fotografia de uma cifra musical (${filename || 'imagem'}).
 
 OBJETIVO:
-Transformar a fotografia em uma cifra limpa e editável para um músico tocar.
+Transformar a foto em cifra editável PRESERVANDO O MOMENTO EXATO DA TROCA.
 
-REGRAS ABSOLUTAS:
-- Preserve o texto da música que estiver visível.
-- Preserve os nomes dos acordes exatamente como aparecem.
-- NÃO invente acordes que não estejam na imagem.
-- Cada acorde deve ficar alinhado sobre a palavra ou sílaba onde ele entra musicalmente.
-- NÃO junte todos os acordes no começo da linha.
-- Se um acorde estiver acima de uma palavra, preserve esse posicionamento usando espaços.
-- Preserve estrofes, refrões e quebras de linha quando forem identificáveis.
-- Ignore partitura, números de página, cabeçalhos, rodapés, propagandas e elementos que não pertençam à cifra.
-- Se alguma parte estiver ilegível, use [?] no trecho duvidoso.
-- Se houver título, artista ou tom visível, extraia-os.
+REGRA MAIS IMPORTANTE — POSIÇÃO:
+- Observe visualmente onde cada acorde está em relação à linha da letra.
+- NÃO devolva a posição por espaços aproximados.
+- Escreva [ACORDE] imediatamente antes da palavra/sílaba que está diretamente abaixo daquele acorde.
+- A posição deve vir da FOTO, não do que parece musicalmente provável.
+- NÃO antecipe nem atrase a troca.
+- Se não for possível determinar a posição com segurança, NÃO adivinhe: mantenha o acorde em uma linha separada.
 
-RETORNE SOMENTE neste formato:
+FIDELIDADE:
+- Preserve o texto visível.
+- Preserve EXATAMENTE cada acorde, incluindo 7, 9, sus e baixos como D/F#.
+- NÃO invente, simplifique, transponha ou rearmonize.
+- Preserve estrofes, refrões e quebras de verso.
+- Ignore partitura, número de página, cabeçalho, rodapé e propaganda.
+- Se algo estiver ilegível, use [?].
+
+RETORNE SOMENTE:
 TITULO: [nome, se identificado]
 ARTISTA: [artista, se identificado]
 TOM: [tom, se identificado]
 
-[cifra em texto monoespaçado, mantendo cada acorde na coluna correta acima da letra]`
-      : `Extraia e organize a cifra deste PDF (${filename || 'arquivo'}).
+CIFRA:
+[letra com [ACORDE] antes da palavra/sílaba exata]`
+      : `Leia VISUALMENTE este PDF de cifra (${filename || 'arquivo'}).
 
-REGRAS ABSOLUTAS:
-- Preserve exatamente os nomes dos acordes existentes.
-- NÃO invente acordes.
-- Mantenha cada acorde acima da palavra/sílaba correspondente.
-- Preserve os espaços necessários entre acordes e letra.
-- Preserve estrofes, refrões e quebras de linha.
-- Remova cabeçalhos, rodapés, propagandas e textos que não façam parte da cifra.
-- Se alguma parte estiver ilegível, use [?] em vez de adivinhar.
-- Se houver título, artista ou tom, use:
-TITULO: ...
-ARTISTA: ...
-TOM: ...
+OBJETIVO:
+Extrair a cifra PRESERVANDO O MOMENTO EXATO DA TROCA mostrado no PDF.
 
-Depois retorne a cifra limpa e organizada.`;
+REGRA MAIS IMPORTANTE — POSIÇÃO:
+- Observe a coluna visual de cada acorde e a palavra/sílaba diretamente abaixo dele.
+- NÃO devolva a posição por quantidade aproximada de espaços.
+- Escreva [ACORDE] imediatamente antes da palavra/sílaba correspondente.
+- A posição deve vir do PDF, não de inferência musical.
+- NÃO antecipe nem atrase a troca.
+- Se a posição não puder ser determinada com segurança, NÃO adivinhe: mantenha o acorde em linha separada.
+
+FIDELIDADE:
+- Preserve EXATAMENTE nomes de acordes, extensões e baixos.
+- NÃO invente, simplifique, transponha ou rearmonize.
+- Preserve a letra, estrofes e quebras de verso como no PDF.
+- Remova somente cabeçalho, rodapé, propaganda e ruído externo.
+- Se algo estiver ilegível, use [?].
+
+RETORNE SOMENTE:
+TITULO: [nome, se identificado]
+ARTISTA: [artista, se identificado]
+TOM: [tom, se identificado]
+
+CIFRA:
+[letra com [ACORDE] antes da palavra/sílaba exata]`;
 
     const data = await callAnthropic({
       model: AI_MODEL,
@@ -1286,9 +1484,9 @@ Depois retorne a cifra limpa e organizada.`;
       }]
     });
 
-    const text = anthropicText(data);
+    const text = normalizeMarkerAiResult(anthropicText(data));
     if (!text) throw new Error('A IA não conseguiu ler o arquivo.');
-    res.json({ text });
+    res.json({ text, position_mode: 'anchored' });
   } catch (err) {
     console.error('ai document', err.message);
     res.status(err.status || 500).json({ error: err.message || 'Erro ao ler arquivo.' });
@@ -1386,11 +1584,11 @@ Encontrar UMA única cifra principal, coerente e bem formatada da música corret
 
 ORDEM DE ESCOLHA DA FONTE:
 1. Primeiro identifique com segurança o compositor/intérprete/versão pedida.
-2. Prefira a página PRINCIPAL de cifra para violão/guitarra do artista correto, com acordes em linhas próprias e letra logo abaixo.
+2. Prefira a página PRINCIPAL de cifra para violão/guitarra do artista correto.
 3. Se houver uma página principal no Cifra Club para o artista correto, ela pode ser usada; caso contrário use Cifras.com.br, Banana Cifras ou outra fonte de cifra com estrutura clara.
 4. NÃO fique preso a um único site: pesquise outras fontes quando necessário.
 5. NÃO use página de ukulele, versão iniciante, reggae, simplificada, versão numerada ou arranjo alternativo quando existir uma versão principal — a menos que o usuário peça explicitamente esse arranjo.
-6. NÃO use uma fonte cujo conteúdo apareça achatado em uma única linha ou em que não seja possível saber com segurança qual acorde pertence a qual verso.
+6. NÃO use uma fonte em que não seja possível identificar com segurança EM QUAL PALAVRA/SÍLABA cada acorde entra.
 ${excludedUrl ? `7. NÃO use novamente esta fonte rejeitada: ${excludedUrl}` : ''}
 
 REGRA DE FONTE ÚNICA:
@@ -1398,12 +1596,23 @@ REGRA DE FONTE ÚNICA:
 - Depois de escolher a fonte principal, TODA a harmonia deve vir dessa MESMA página.
 - Nunca misture acordes de duas versões.
 
-FIDELIDADE MUSICAL:
+FIDELIDADE MUSICAL — REGRA MAIS IMPORTANTE:
 - Copie os acordes da fonte principal sem transpor, simplificar ou rearmonizar.
-- Preserve baixos e extensões, por exemplo D/F#, Bm7, F#m7, G9.
-- Preserve cada acorde sobre a palavra/sílaba correspondente.
-- Não substitua acordes por equivalentes de outra versão.
-- Não invente acordes ausentes.
+- Preserve EXATAMENTE extensões e baixos: F#m7 não pode virar F#m; D/F# não pode sumir; A4 continua A4.
+- Preserve EXATAMENTE as quebras de versos da fonte. NÃO junte dois versos e NÃO divida um verso em outro ponto.
+- NÃO mova acorde para outra palavra só para "organizar" visualmente.
+- NÃO invente acordes ausentes.
+
+MARCAÇÃO DA TROCA DE ACORDE:
+- Para cada linha que contém letra, coloque o acorde ENTRE COLCHETES imediatamente antes da palavra ou sílaba onde ele APARECE NA FONTE escolhida.
+- A posição vem da fonte visual/textual. NÃO escolha a posição pelo que parece musicalmente provável.
+- Exemplo genérico de formato: Eu quero [G]cantar para [D]Ti
+- Se a fonte mostra o acorde sobre uma palavra mais à frente, o marcador deve ficar nessa palavra mais à frente, mesmo que outra posição pareça musicalmente possível.
+- Se houver mais de um acorde na mesma linha, marque TODOS exatamente no ponto mostrado pela fonte.
+- Linhas apenas de acordes (intro/interlúdio) podem continuar como linha normal: G  D  G
+- Títulos de seção continuam como [Intro], [Verso], [Refrão], [Ponte] etc.
+- NÃO use espaços para tentar posicionar acordes sobre a letra. A posição será definida pelos marcadores [ACORDE].
+- Antes de responder, confira cada marcador contra a fonte escolhida: palavra/sílaba, extensão do acorde e baixo devem coincidir.
 
 RETORNE SOMENTE:
 TITULO: [nome]
@@ -1412,10 +1621,65 @@ TOM: [tom da fonte principal, em C, C#, D, Eb, E, F, F#, G, Ab, A, Bb ou B]
 FONTE: [nome do site]
 URL: [URL direta da página principal escolhida]
 
-[cifra da única fonte escolhida]
+CIFRA:
+[cifra da única fonte escolhida usando [ACORDE] antes da palavra/sílaba]
 
-Se nenhuma fonte principal tiver estrutura suficientemente clara para copiar sem adivinhar, retorne somente:
+Se nenhuma fonte principal tiver estrutura suficientemente clara para marcar as trocas sem adivinhar, retorne somente:
 ERRO: Não encontrei uma cifra principal confiável desta versão.`;
+}
+
+// v6.15 — converte [ACORDE]colado à palavra em duas linhas monoespaçadas.
+// Assim a posição musical não depende dos espaços gerados pela IA.
+function inlineChordMarkersToRows(input) {
+  const chordInside = '[A-G](?:#|b)?(?:maj|min|m(?!aj)|dim|aug|sus\\d*|add\\d*|°|ø|\\d+)*(?:\\/[A-G](?:#|b)?)?';
+  const markerRx = new RegExp('\\[(' + chordInside + ')\\]', 'g');
+  const out = [];
+
+  for (const originalLine of String(input || '').replace(/\r\n?/g, '\n').split('\n')) {
+    markerRx.lastIndex = 0;
+    let match;
+    let last = 0;
+    let lyric = '';
+    const markers = [];
+
+    while ((match = markerRx.exec(originalLine)) !== null) {
+      lyric += originalLine.slice(last, match.index);
+      markers.push({ chord: match[1], pos: lyric.length });
+      last = match.index + match[0].length;
+    }
+
+    if (!markers.length) {
+      out.push(originalLine);
+      continue;
+    }
+
+    lyric += originalLine.slice(last);
+
+    // Linha marcada sem letra: intro/interlúdio vira linha simples de acordes.
+    if (!/[A-Za-zÀ-ÿ]/.test(lyric)) {
+      out.push(markers.map(x => x.chord).join('  '));
+      continue;
+    }
+
+    const chordLine = [];
+    for (const item of markers) {
+      // A âncora é EXATAMENTE a coluna da palavra/sílaba.
+      // Não desloca o acorde para "caber"; isso mudaria a hora da troca.
+      const pos = Math.max(0, item.pos);
+      const needed = pos + item.chord.length;
+      while (chordLine.length < needed) chordLine.push(' ');
+      for (let i = 0; i < item.chord.length; i++) {
+        // Se houver sobreposição rara, mantém a primeira âncora e só preenche
+        // posições ainda vazias; nunca empurra nenhum acorde horizontalmente.
+        if (chordLine[pos + i] === undefined || chordLine[pos + i] === ' ') chordLine[pos + i] = item.chord[i];
+      }
+    }
+
+    out.push(chordLine.join('').replace(/\s+$/, ''));
+    out.push(lyric.replace(/\s+$/, ''));
+  }
+
+  return out.join('\n');
 }
 
 async function runCifraWebSearch(prompt) {
@@ -1487,6 +1751,11 @@ app.post('/api/ai/search', requireAuth, aiLimiter, async (req, res) => {
       .replace(/^URL:\s*.*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
+
+    // A busca retorna os acordes presos à palavra/sílaba: [D]Cada... [G]fé...
+    // Convertemos aqui para o formato atual do app (linha de acordes + linha de letra).
+    // Isso preserva a hora da troca sem depender de espaços aproximados da IA.
+    text = inlineChordMarkersToRows(text);
 
     const refusalOrExplanation = /(?:direitos autorais|material protegido|copyright|não posso fornecer|nao posso fornecer|não é possível fornecer|nao e possivel fornecer|acordes principais encontrados|artista\s*\/\s*vers[aã]o)/i;
     if (!text || text.length < 60 || refusalOrExplanation.test(text)) {
